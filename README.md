@@ -1,10 +1,6 @@
-Here's the content converted to Markdown format:
-
 # Server
 
-![vert.x](https://img.shields.io/badge/vert.x-4.5.10-purple.svg)
-
-This application was generated using [http://start.vertx.io](http://start.vertx.io)
+Oscal CLI server (to avoid JVM warmup)
 
 ## Building
 
