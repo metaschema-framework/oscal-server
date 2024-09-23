@@ -11,19 +11,19 @@ This application was generated using [http://start.vertx.io](http://start.vertx.
 To launch your tests:
 
 ```
-./mvnw clean test
+mvn clean test
 ```
 
 To package your application:
 
 ```
-./mvnw clean package
+mvn clean package
 ```
 
 To run your application:
 
 ```
-./mvnw clean compile exec:java
+mvn clean compile exec:java
 ```
 
 ## Help
