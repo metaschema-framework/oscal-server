@@ -12,12 +12,17 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <kotlin.version>1.7.21</kotlin.version>
+    <kotlinx.coroutines.version>1.6.4</kotlinx.coroutines.version>
 
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
     <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
 
     <vertx.version>4.5.10</vertx.version>
+    <oscal-cli.version>2.1.0</oscal-cli.version>
+    <metaschema-framework.version>1.1.0</metaschema-framework.version>
+    <liboscal-java.version>4.1.0</liboscal-java.version>
+    <log4j.version>2.23.1</log4j.version>
 
     <main.verticle>gov.nist.secauto.oscal.tools.server.MainVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
@@ -36,33 +41,10 @@
   </dependencyManagement>
 
   <dependencies>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-client</artifactId>
-    </dependency>
+    <!-- Existing Vert.x dependencies -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-openapi</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-json-schema</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-openapi-router</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-shell</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-web-api-contract</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -73,7 +55,61 @@
       <artifactId>kotlin-stdlib-jdk8</artifactId>
       <version>${kotlin.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-coroutines-core</artifactId>
+      <version>${kotlinx.coroutines.version}</version>
+    </dependency>
 
+    <!-- Log4j2 dependencies -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+
+    <!-- OSCAL CLI dependency -->
+    <dependency>
+      <groupId>dev.metaschema.oscal</groupId>
+      <artifactId>oscal-cli-enhanced</artifactId>
+      <version>${oscal-cli.version}</version>
+    </dependency>
+
+    <!-- Metaschema Framework dependencies -->
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>cli-processor</artifactId>
+      <version>${metaschema-framework.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-cli</artifactId>
+      <version>${metaschema-framework.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-schema-generator</artifactId>
+      <version>${metaschema-framework.version}</version>
+    </dependency>
+
+    <!-- LibOSCAL Java dependency -->
+    <dependency>
+      <groupId>dev.metaschema.oscal</groupId>
+      <artifactId>liboscal-java</artifactId>
+      <version>${liboscal-java.version}</version>
+    </dependency>
+
+    <!-- Existing test dependencies -->
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-unit</artifactId>
@@ -85,11 +121,34 @@
       <version>4.13.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-web-openapi</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>io.swagger.parser.v3</groupId>
+        <artifactId>swagger-parser</artifactId>
+        <version>2.1.14</version>
+      </dependency>
+         <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-lang-kotlin-coroutines</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
-      <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-      <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
+    <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
+    <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
@@ -132,6 +191,9 @@
                   </manifestEntries>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
+                </transformer>
               </transformers>
               <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar
               </outputFile>
@@ -157,6 +219,4 @@
       </plugin>
     </plugins>
   </build>
-
-
 </project>
