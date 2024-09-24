@@ -13,10 +13,10 @@ import kotlinx.coroutines.launch
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 
-class MainVerticle : CoroutineVerticle() {
+class OscalVerticle : CoroutineVerticle() {
 
     companion object {
-        private val logger: Logger = LogManager.getLogger(MainVerticle::class.java)
+        private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
     }
 
     override suspend fun start() {

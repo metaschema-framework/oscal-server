@@ -11,7 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(VertxUnitRunner::class)
-class TestMainVerticle {
+class TestOscalVerticle {
 
     private lateinit var vertx: Vertx
     private lateinit var webClient: WebClient
@@ -22,7 +22,7 @@ class TestMainVerticle {
         webClient = WebClient.create(vertx, WebClientOptions().setDefaultPort(8888))
         
         val async = testContext.async()
-        vertx.deployVerticle(MainVerticle()) { ar ->
+        vertx.deployVerticle(OscalVerticle()) { ar ->
             if (ar.succeeded()) {
                 async.complete()
             } else {

@@ -24,7 +24,7 @@
     <liboscal-java.version>4.1.0</liboscal-java.version>
     <log4j.version>2.23.1</log4j.version>
 
-    <main.verticle>gov.nist.secauto.oscal.tools.server.MainVerticle</main.verticle>
+    <main.verticle>gov.nist.secauto.oscal.tools.server.OscalVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
   </properties>
 
