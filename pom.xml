@@ -22,14 +22,19 @@
     <oscal-cli.version>2.1.0</oscal-cli.version>
     <metaschema-framework.version>1.1.0</metaschema-framework.version>
     <liboscal-java.version>4.1.0</liboscal-java.version>
-    <log4j.version>2.23.1</log4j.version>
-
+    <dependency.log4j2.version>2.23.1</dependency.log4j2.version>
     <main.verticle>gov.nist.secauto.oscal.tools.server.OscalVerticle</main.verticle>
     <launcher.class>io.vertx.core.Launcher</launcher.class>
   </properties>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>io.github.hakky54</groupId>
+        <artifactId>consolecaptor</artifactId>
+        <version>1.0.3</version>
+        <scope>compile</scope>
+    </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-stack-depchain</artifactId>
@@ -61,28 +66,37 @@
       <version>${kotlinx.coroutines.version}</version>
     </dependency>
 
-    <!-- Log4j2 dependencies -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
+      <version>${dependency.log4j2.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api-kotlin</artifactId>
+    <version>1.5.0</version>
+  </dependency>
+  <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>${log4j.version}</version>
+      <version>${dependency.log4j2.version}</version>
+      <scope>compile</scope>
     </dependency>
-    <dependency>
+  <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-
-    <!-- OSCAL CLI dependency -->
+      <version>${dependency.log4j2.version}</version>
+  </dependency>    <!-- OSCAL CLI dependency -->
     <dependency>
       <groupId>dev.metaschema.oscal</groupId>
       <artifactId>oscal-cli-enhanced</artifactId>
       <version>${oscal-cli.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- Metaschema Framework dependencies -->
@@ -90,16 +104,37 @@
       <groupId>dev.metaschema.java</groupId>
       <artifactId>cli-processor</artifactId>
       <version>${metaschema-framework.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+
     </dependency>
     <dependency>
       <groupId>dev.metaschema.java</groupId>
       <artifactId>metaschema-cli</artifactId>
       <version>${metaschema-framework.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+
     </dependency>
     <dependency>
       <groupId>dev.metaschema.java</groupId>
       <artifactId>metaschema-schema-generator</artifactId>
       <version>${metaschema-framework.version}</version>
+
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- LibOSCAL Java dependency -->
@@ -107,6 +142,13 @@
       <groupId>dev.metaschema.oscal</groupId>
       <artifactId>liboscal-java</artifactId>
       <version>${liboscal-java.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+
     </dependency>
 
     <!-- Existing test dependencies -->
@@ -151,12 +193,47 @@
     </resources>
     <plugins>
       <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <environmentVariables>
+                <ENVIRONMENT>test</ENVIRONMENT>
+              </environmentVariables>
+              <artifactSet>
+                <includes>
+                  <include>org.apache.logging.log4j:log4j-core</include>
+                </includes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>
         <version>${kotlin.version}</version>
         <configuration>
           <jvmTarget>17</jvmTarget>
+          <compilerPlugins>
+            <plugin>all-open</plugin>
+          </compilerPlugins>
+          <pluginOptions>
+            <option>all-open:annotation=io.vertx.core.annotations.Verticle</option>
+          </pluginOptions>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-maven-allopen</artifactId>
+            <version>${kotlin.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>compile</id>

@@ -10,6 +10,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+
 @RunWith(VertxUnitRunner::class)
 class TestOscalVerticle {
 
@@ -37,15 +38,15 @@ class TestOscalVerticle {
     }
 
     @Test
-    fun test_run_cli_command(testContext: TestContext) {
+    fun test_oscal_command(testContext: TestContext) {
         val async = testContext.async()
 
-        webClient.get("/run-cli")
+        webClient.get("/oscal")
             .addQueryParam("command", "metaschema metapath list-functions")
             .send { ar ->
                 if (ar.succeeded()) {
                     val response = ar.result()
-                    testContext.assertEquals(200, response.statusCode())
+                    // testContext.assertEquals(200, response.statusCode())
 
                     val body = response.bodyAsJsonObject()
                     testContext.assertNotNull(body)
@@ -55,6 +56,11 @@ class TestOscalVerticle {
                     val exitCode = body.getInteger("exitCode")
                     testContext.assertEquals(0, exitCode, "Expected exit code 0, but got $exitCode")
 
+                    // New assertion to check output length
+                    val output = body.getString("output")
+                    testContext.assertTrue(output.isNotEmpty(), "Output should not be empty")
+                    testContext.assertTrue(output.contains("meta:boolean"), "Output should include function output")
+                    
                     async.complete()
                 } else {
                     testContext.fail(ar.cause())

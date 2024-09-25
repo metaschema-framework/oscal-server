@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="DEBUG" packages="gov.nist.secauto.oscal.tools.server.logging">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        <RequestCapture name="RequestCapture">
+            <PatternLayout pattern="%msg%n"/>
+        </RequestCapture>
+    </Appenders>
+    <Loggers>
+        <Root level="all">
+            <AppenderRef ref="RequestCapture"/>
+        </Root>
+    </Loggers>
+</Configuration>
