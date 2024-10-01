@@ -1,20 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="DEBUG" packages="gov.nist.secauto.oscal.tools.server">
+<Configuration status="WARN">
     <Appenders>
         <!-- Console appender for general logging -->
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%msg%n"/>
         </Console>
 
-        <!-- Redirect System.out to Log4j -->
-        <Console name="STDOUT" target="SYSTEM_OUT">
-            <PatternLayout pattern="[STDOUT] %msg%n"/>
-        </Console>
-
-        <!-- Redirect System.err to Log4j -->
-        <Console name="STDERR" target="SYSTEM_ERR">
-            <PatternLayout pattern="[STDERR] %msg%n"/>
-        </Console>
     </Appenders>
 
     <Loggers>

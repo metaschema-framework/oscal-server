@@ -240,7 +240,7 @@ label, legend, fieldset {
         fetch(`/oscal?command=${encodeURIComponent(command)}`)
             .then(response => response.json())
             .then(data => {
-                resultDiv.innerHTML = `Exit Code: ${data.exitCode}<br>Status: ${data.status} <br>Output: ${data.output.replaceAll("\n","<br>")}<br>Errors: ${data.errors.replaceAll("\n","<br>")}`;
+                resultDiv.innerHTML = `Exit Code: ${data.exitCode} <br>Output: ${data.output.replaceAll("\n","<br>")}<br>Errors: ${data.errors.replaceAll("\n","<br>")}`;
             })
             .catch(error => {
                 console.error('Error:', error);

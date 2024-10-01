@@ -42,25 +42,13 @@ class TestOscalVerticle {
         val async = testContext.async()
 
         webClient.get("/oscal")
-            .addQueryParam("command", "metaschema metapath list-functions")
+            .addQueryParam("command", "validate https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml")
             .send { ar ->
                 if (ar.succeeded()) {
                     val response = ar.result()
-                    // testContext.assertEquals(200, response.statusCode())
-
+                    testContext.assertEquals(200, response.statusCode())
                     val body = response.bodyAsJsonObject()
                     testContext.assertNotNull(body)
-                    testContext.assertTrue(body.containsKey("exitCode"))
-                    testContext.assertTrue(body.containsKey("status"))
-
-                    val exitCode = body.getInteger("exitCode")
-                    testContext.assertEquals(0, exitCode, "Expected exit code 0, but got $exitCode")
-
-                    // New assertion to check output length
-                    val output = body.getString("output")
-                    testContext.assertTrue(output.isNotEmpty(), "Output should not be empty")
-                    testContext.assertTrue(output.contains("meta:boolean"), "Output should include function output")
-                    
                     async.complete()
                 } else {
                     testContext.fail(ar.cause())

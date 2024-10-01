@@ -1,93 +1,177 @@
 package gov.nist.secauto.oscal.tools.server.commands
-import gov.nist.secauto.metaschema.cli.processor.CLIProcessor.CallingContext
+
+import gov.nist.secauto.metaschema.cli.processor.CLIProcessor
+import gov.nist.secauto.metaschema.cli.processor.command.ICommand
 import gov.nist.secauto.metaschema.cli.processor.command.ICommandExecutor
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
-import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
 import gov.nist.secauto.metaschema.cli.processor.ExitCode
-import gov.nist.secauto.metaschema.core.model.IBoundObject
+import gov.nist.secauto.metaschema.cli.processor.InvalidArgumentException
 import gov.nist.secauto.metaschema.databind.IBindingContext
-import gov.nist.secauto.metaschema.databind.io.Format
-import gov.nist.secauto.metaschema.databind.io.FormatDetector
-import gov.nist.secauto.metaschema.databind.io.IBoundLoader
-import gov.nist.secauto.metaschema.databind.io.ISerializer
-import gov.nist.secauto.metaschema.databind.io.ModelDetector
 import gov.nist.secauto.oscal.lib.OscalBindingContext
 import org.apache.commons.cli.CommandLine
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.io.InputStream
+import org.apache.commons.cli.CommandLineParser
+import org.apache.commons.cli.DefaultParser
+import org.apache.commons.cli.HelpFormatter
+import org.apache.commons.cli.Options
+import org.apache.commons.cli.ParseException
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.io.ByteArrayOutputStream
-import java.io.PrintStream
-import java.io.Writer
-import java.net.URI
+import java.io.PrintWriter
+import java.nio.charset.StandardCharsets
+import java.util.LinkedList
+import java.util.Deque
+import gov.nist.secauto.oscal.tools.cli.core.commands.ConvertCommand
+import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
 
-class OscalCommandExecutor(
-    private val args: List<String>,
-    private val outputStream: ByteArrayOutputStream,
-    private val errorStream: ByteArrayOutputStream,
-    private val fileStream: ByteArrayOutputStream
-) : ICommandExecutor {
-    private fun getBindingContext(): IBindingContext {
+open class OscalCommandExecutor(
+    protected val command: String,
+    protected val args: List<String>,
+    protected val outputStream: ByteArrayOutputStream,
+    protected val errorStream: ByteArrayOutputStream,
+    protected val fileStream: ByteArrayOutputStream
+) : CLIProcessor("oscal-server"), ICommandExecutor {
+
+    protected val logger: Logger = LogManager.getLogger(this::class.java)
+    protected open val commands: Map<String, () -> ICommand> = mapOf(
+        "validate" to ::ValidateCommand,
+        "convert" to ::ConvertCommand
+    )
+
+    protected open fun getBindingContext(): IBindingContext {
         return OscalBindingContext.instance()
     }
 
-    @Throws(FileNotFoundException::class, IOException::class)
-    private fun handleConversion(source: URI, toFormat: Format, writer: Writer, loader: IBoundLoader) {
-        var boundClass: Class<out IBoundObject>
-        var boundObject: IBoundObject
+    override fun execute(): ExitStatus {
+        logger.warn("Executing command: $command")
+        logger.warn("With args: $args")
 
-        source.toURL().openStream().use { inputStream ->
-            val formatResult = loader.detectFormat(inputStream)
-            val sourceFormat = formatResult.format
+        val callingContext = createCallingContext(command, args)
+        return callingContext.processCommand()
+    }
 
-            formatResult.dataStream.use { fis ->
-                loader.detectModel(fis, sourceFormat).use { modelResult ->
-                    boundClass = modelResult.boundClass
-                    modelResult.dataStream.use { mis ->
-                        boundObject = loader.load(boundClass, sourceFormat, mis, source)
+    protected open fun createCallingContext(command: String, args: List<String>): OscalCallingContext {
+        logger.debug("Creating call context")
+
+        return OscalCallingContext(command, args)
+    }
+
+    open inner class OscalCallingContext(val command: String, args: List<String>) : CallingContext(args) {
+        protected val oscalOptions: List<org.apache.commons.cli.Option>
+        protected val oscalCalledCommands: Deque<ICommand> = LinkedList()
+        protected val oscalExtraArgs: List<String>
+        init {
+            logger.debug("$command context initializing");
+            val topLevelCommandMap = commands.mapValues { (_, factory) -> factory() }
+
+            val tempOptions = LinkedList(OPTIONS)
+            val tempExtraArgs = LinkedList<String>()
+
+            var endArgs = false
+            for (arg in args) {
+                when {
+                    endArgs || arg.startsWith("-") -> tempExtraArgs.add(arg)
+                    arg == "--" -> endArgs = true
+                    else -> {
+                        val cmd = if (oscalCalledCommands.isEmpty()) {
+                            topLevelCommandMap[arg]
+                        } else {
+                            oscalCalledCommands.last.getSubCommandByName(arg)
+                        }
+
+                        if (cmd == null) {
+                            tempExtraArgs.add(arg)
+                            endArgs = true
+                        } else {
+                            oscalCalledCommands.add(cmd)
+                        }
                     }
                 }
             }
+
+            for (cmd in oscalCalledCommands) {
+                tempOptions.addAll(cmd.gatherOptions())
+            }
+
+            oscalOptions = tempOptions.toList()
+            oscalExtraArgs = tempExtraArgs.toList()
         }
 
-        val serializer: ISerializer<*> = getBindingContext().newSerializer(toFormat, boundClass)
-        serializer.serialize(boundObject, writer)
-    }
+        override fun processCommand(): ExitStatus {
+            val parser: CommandLineParser = DefaultParser()
+            lateinit var cmdLine: CommandLine
 
-    override fun execute(): ExitStatus {
-        if (args.size < 2) {
-            errorStream.write("Error: Insufficient arguments\n".toByteArray())
-            return MessageExitStatus(ExitCode.INVALID_ARGUMENTS)
+            // Phase 1: Check for help or version
+            run {
+                try {
+                    val phase1Options = Options().apply {
+                        addOption(HELP_OPTION)
+                        addOption(VERSION_OPTION)
+                    }
+                    cmdLine = parser.parse(phase1Options, oscalExtraArgs.toTypedArray(), true)
+                } catch (ex: ParseException) {
+                    return handleInvalidCommand(ex.message ?: "Invalid command")
+                }
+
+                if (cmdLine.hasOption(VERSION_OPTION)) {
+                    showVersion()
+                    return ExitCode.OK.exit()
+                } else if (cmdLine.hasOption(HELP_OPTION)) {
+                    showHelp()
+                    return ExitCode.OK.exit()
+                }
+            }
+
+            // Phase 2: Execute the command
+            try {
+                cmdLine = parser.parse(toOptions(), oscalExtraArgs.toTypedArray())
+            } catch (ex: ParseException) {
+                return handleInvalidCommand(ex.message ?: "Invalid command")
+            }
+
+            return invokeCommand(cmdLine)
         }
 
-        val sourcePath = args[0]
-        val targetFormat = args[1]
+        override protected open fun invokeCommand(cmdLine: CommandLine): ExitStatus {
+            return try {
+                for (cmd in oscalCalledCommands) {
+                    try {
+                        cmd.validateOptions(this, cmdLine)
+                    } catch (ex: InvalidArgumentException) {
+                        return handleInvalidCommand(ex.message ?: "Invalid argument")
+                    }
+                }
 
-        try {
-            val sourceUri = URI(sourcePath)
-            val toFormat = Format.valueOf(targetFormat.uppercase())
-            val bindingContext = getBindingContext()
-            val loader = bindingContext.newBoundLoader()
+                val targetCommand = oscalCalledCommands.lastOrNull()
+                if (targetCommand == null) {
+                    ExitCode.INVALID_COMMAND.exit()
+                } else {
+                    val executor = targetCommand.newExecutor(this, cmdLine)
+                    executor.execute()
+                }
+            } catch (ex: RuntimeException) {
+                ExitCode.RUNTIME_ERROR
+                    .exitMessage("An uncaught runtime error occurred. ${ex.localizedMessage}")
+                    .withThrowable(ex)
+            }
+        }
 
-            val writer = outputStream.writer()
-            handleConversion(sourceUri, toFormat, writer, loader)
-            writer.flush()
+        override fun handleInvalidCommand(message: String): ExitStatus {
+            val status = ExitCode.INVALID_COMMAND.exitMessage(message)
+            return status
+        }
 
-            return MessageExitStatus(ExitCode.OK)
-        } catch (e: IllegalArgumentException) {
-            errorStream.write("Error: Invalid format specified\n".toByteArray())
-            return MessageExitStatus(ExitCode.INVALID_ARGUMENTS)
-        } catch (e: FileNotFoundException) {
-            errorStream.write("Error: Source file not found\n".toByteArray())
-            return MessageExitStatus(ExitCode.IO_ERROR)
-        } catch (e: IOException) {
-            errorStream.write("Error: IO Exception occurred\n".toByteArray())
-            e.printStackTrace(PrintStream(errorStream))
-            return MessageExitStatus(ExitCode.IO_ERROR)
-        } catch (e: Exception) {
-            errorStream.write("Error: Unexpected exception occurred\n".toByteArray())
-            e.printStackTrace(PrintStream(errorStream))
-            return MessageExitStatus(ExitCode.PROCESSING_ERROR)
+        fun showVersion() {
+            PrintWriter(outputStream, true, StandardCharsets.UTF_8).use { writer ->
+                writer.println("OSCAL Server Validator") // Replace with actual version info
+            }
+        }
+
+
+        override fun toOptions(): Options {
+            return Options().apply {
+                oscalOptions.forEach { addOption(it) }
+            }
         }
     }
 }
