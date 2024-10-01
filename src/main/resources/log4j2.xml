@@ -1,16 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="DEBUG" packages="gov.nist.secauto.oscal.tools.server.logging">
+<Configuration status="DEBUG" packages="gov.nist.secauto.oscal.tools.server">
     <Appenders>
+        <!-- Console appender for general logging -->
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </Console>
-        <RequestCapture name="RequestCapture">
             <PatternLayout pattern="%msg%n"/>
-        </RequestCapture>
+        </Console>
+
+        <!-- Redirect System.out to Log4j -->
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <PatternLayout pattern="[STDOUT] %msg%n"/>
+        </Console>
+
+        <!-- Redirect System.err to Log4j -->
+        <Console name="STDERR" target="SYSTEM_ERR">
+            <PatternLayout pattern="[STDERR] %msg%n"/>
+        </Console>
     </Appenders>
+
     <Loggers>
+        <!-- Redirect System.out to RequestCapture -->
+        <!-- Root logger -->
         <Root level="all">
-            <AppenderRef ref="RequestCapture"/>
+            <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
 </Configuration>

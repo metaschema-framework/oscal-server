@@ -1,83 +1,93 @@
 package gov.nist.secauto.oscal.tools.server
-
+import io.vertx.ext.web.handler.StaticHandler
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
-import gov.nist.secauto.oscal.tools.cli.core.CLI
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.openapi.OpenAPILoaderOptions
 import io.vertx.ext.web.openapi.RouterBuilder
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
-import io.vertx.kotlin.coroutines.await
 import io.vertx.kotlin.coroutines.dispatcher
-import kotlinx.coroutines.launch
-import io.vertx.ext.web.handler.StaticHandler
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.Dispatchers
+import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.withContext
-import org.apache.logging.log4j.LogManager
+import kotlinx.coroutines.launch
+import gov.nist.secauto.oscal.tools.server.commands.OscalCommandExecutor
 import org.apache.logging.log4j.Logger
-import org.apache.logging.log4j.ThreadContext
-import java.util.UUID
-import gov.nist.secauto.oscal.tools.server.logging.RequestLogHolder
+import org.apache.logging.log4j.LogManager
+import java.io.ByteArrayOutputStream
 
 class OscalVerticle : CoroutineVerticle() {
-    private val scope = CoroutineScope(SupervisorJob())
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
 
     override suspend fun start() {
         val router = createRouter()
-        router.get("/health").handler { ctx ->
-            ctx.response().setStatusCode(200).end("OK")
-        }
-        router.route("/").handler(StaticHandler.create())
         startHttpServer(router)
     }
 
     private suspend fun createRouter(): Router {
+        logger.info("Creating router")
         val options = OpenAPILoaderOptions()
-        val routerBuilder = RouterBuilder.create(vertx, "openapi.yaml", options).await()
-        routerBuilder.operation("oscal").handler(::handleCliRequest)
-        return routerBuilder.createRouter()
+        val routerBuilder = RouterBuilder.create(vertx, "openapi.yaml", options).coAwait()
+        logger.info("Router builder created")
+        routerBuilder.operation("oscal").handler { ctx -> handleCliRequest(ctx) }
+        val router = routerBuilder.createRouter()
+        router.route("/*").handler(StaticHandler.create("webroot"))        
+        return router;
     }
 
-    private fun startHttpServer(router: Router) {
-        vertx.createHttpServer()
-            .requestHandler(router)
-            .listen(8888)
-            .onSuccess { server -> 
-                logger.info("HTTP server started on port ${server.actualPort()}")
-            }
-            .onFailure { error ->
-                logger.error("Failed to start HTTP server: ${error.message}", error)
-            }
-    }
-
-
-    private fun parseCommandToArgs(command: String): Array<String> {
-        return command.split("\\s+".toRegex())
-            .filter { it.isNotBlank() }
-            .toTypedArray()
-    }
-
-    private fun captureCliOutput(block: () -> ExitStatus): Pair<ExitStatus, String> {
+    private suspend fun startHttpServer(router: Router) {
         try {
-
-            val result = block()            
-            return Pair(result, "output")
-        } finally {
-
+            val server = vertx.createHttpServer()
+                .requestHandler(router)
+                .listen(8888)
+                .coAwait()
+            logger.info("HTTP server started on port ${server.actualPort()}")
+        } catch (e: Exception) {
+            logger.error("Failed to start HTTP server", e)
         }
     }
 
-    private fun sendSuccessResponse(ctx: RoutingContext, exitCode: Int, status: String, output: String) {
+    private fun handleCliRequest(ctx: RoutingContext) {
+        // Launch a coroutine to handle the request
+        launch {
+            try {
+                logger.info("Handling CLI request")
+                val command = ctx.queryParam("command").firstOrNull()
+                if (command != null) {
+                    val args = parseCommandToArgs(command)
+                    val (exitStatus, streams) = executeCommand(args)
+                    val (output, errors, files) = streams
+                    sendSuccessResponse(ctx, exitStatus, output, errors, files)
+                } else {
+                    sendErrorResponse(ctx, 400, "Command parameter is missing")
+                }
+            } catch (e: Exception) {
+                logger.error("Error handling CLI request", e)
+                sendErrorResponse(ctx, 500, "Internal server error")
+            }
+        }
+    }
+
+    private fun parseCommandToArgs(command: String): List<String> {
+        return command.split("\\s+".toRegex()).filter { it.isNotBlank() }
+    }
+
+    private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, Triple<String, String, String>> {
+        return withContext(vertx.dispatcher()) {
+            val outputStream = ByteArrayOutputStream()
+            val errorStream = ByteArrayOutputStream()
+            val fileStream = ByteArrayOutputStream()
+            val oscalCommandExecutor = OscalCommandExecutor(args, outputStream, errorStream, fileStream)
+            val exitStatus = oscalCommandExecutor.execute()
+            Pair(exitStatus, Triple(outputStream.toString(), errorStream.toString(), fileStream.toString()))
+        }
+    }
+
+    private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, errors: String, output: String, files: String) {
         val responseJson = JsonObject()
-            .put("exitCode", exitCode)
-            .put("status", status)
+            .put("errors", errors)
             .put("output", output)
+            .put("files", files)
 
         ctx.response()
             .putHeader("content-type", "application/json")
@@ -90,71 +100,4 @@ class OscalVerticle : CoroutineVerticle() {
             .putHeader("content-type", "application/json")
             .end(JsonObject().put("error", message).encode())
     }
-
-    private fun handleCliRequest(ctx: RoutingContext) {
-        val command = ctx.queryParam("command").firstOrNull()
-        if (command.isNullOrEmpty()) {
-            sendErrorResponse(ctx, 400, "Missing 'command' query parameter")
-            return
-        }
-
-        scope.launch(vertx.dispatcher()) {
-            try {
-                val requestId = UUID.randomUUID().toString()
-                ThreadContext.put("requestId", requestId)
-                
-                val args = parseCommandToArgs(command)
-                val (exitStatus, output) = withContext(Dispatchers.IO) {
-                    captureCliOutput(requestId) { CLI.runCli(*args) }
-                }
-                
-                val capturedLogs = RequestLogHolder.logs.remove(requestId)?.toString() ?: ""
-                
-                if (output.isNotEmpty() || capturedLogs.isNotEmpty()) {
-                    sendSuccessResponse(ctx, exitStatus.exitCode.statusCode, exitStatus.exitCode.name, output, capturedLogs)
-                } else {
-                    logger.warn("CLI operation produced no output for command: $command")
-                    sendErrorResponse(ctx, 500, capturedLogs)
-                }
-            } catch (e: Exception) {
-                logger.error("Error processing CLI request: ${e.message}", e)
-                sendErrorResponse(ctx, 500, "Internal Server Error: ${e.message}")
-            } finally {
-                ThreadContext.clearAll()
-            }
-        }
-    }
-
-    private fun captureCliOutput(requestId: String, block: () -> ExitStatus): Pair<ExitStatus, String> {
-        val outputStream = ByteArrayOutputStream()
-        val printStream = PrintStream(outputStream)
-        
-        val originalOut = System.out
-        val originalErr = System.err
-        
-        System.setOut(printStream)
-        System.setErr(printStream)
-        
-        try {
-            ThreadContext.put("requestId", requestId)
-            val result = block()
-            return Pair(result, outputStream.toString())
-        } finally {
-            System.setOut(originalOut)
-            System.setErr(originalErr)
-            ThreadContext.clearAll()
-        }
-    }
-
-    private fun sendSuccessResponse(ctx: RoutingContext, exitCode: Int, status: String, output: String, logs: String) {
-        val responseJson = JsonObject()
-            .put("exitCode", exitCode)
-            .put("status", status)
-            .put("output", logs)
-
-        ctx.response()
-            .putHeader("content-type", "application/json")
-            .end(responseJson.encode())
-    }
-    
 }

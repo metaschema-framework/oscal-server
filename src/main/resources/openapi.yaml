@@ -27,6 +27,12 @@ paths:
                     type: integer
                   status:
                     type: string
+                  output:
+                    type: string
+                  errors:
+                    type: string
+                  sarif:
+                    type: string
         '400':
           description: Bad request
           content:
