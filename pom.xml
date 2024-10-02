@@ -291,6 +291,7 @@
           <arguments>
             <argument>run</argument>
             <argument>${main.verticle}</argument>
+            <argument>-Xmx1024m</argument>
           </arguments>
         </configuration>
       </plugin>
