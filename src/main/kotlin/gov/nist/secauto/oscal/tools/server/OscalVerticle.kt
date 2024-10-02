@@ -1,4 +1,6 @@
 package gov.nist.secauto.oscal.tools.server
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import java.util.UUID
 import io.vertx.ext.web.handler.StaticHandler
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
@@ -8,6 +10,7 @@ import io.vertx.ext.web.openapi.OpenAPILoaderOptions
 import io.vertx.ext.web.openapi.RouterBuilder
 import io.vertx.core.json.JsonObject
 import io.vertx.core.file.FileSystem
+import io.vertx.core.VertxOptions
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.dispatcher
 import io.vertx.kotlin.coroutines.coAwait
@@ -24,14 +27,17 @@ import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
+import io.vertx.kotlin.coroutines.awaitBlocking
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
 
     override suspend fun start() {
+        VertxOptions().setEventLoopPoolSize(8)
         val router = createRouter()
         startHttpServer(router)
     }
+
 
     private suspend fun createRouter(): Router {
         logger.info("Creating router")
@@ -40,10 +46,9 @@ class OscalVerticle : CoroutineVerticle() {
         logger.info("Router builder created")
         routerBuilder.operation("oscal").handler { ctx -> handleCliRequest(ctx) }
         val router = routerBuilder.createRouter()
-        router.route("/*").handler(StaticHandler.create("webroot"))        
-        return router;
+        router.route("/*").handler(StaticHandler.create("webroot"))
+        return router
     }
-
     private suspend fun startHttpServer(router: Router) {
         try {
             val server = vertx.createHttpServer()
@@ -57,15 +62,17 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun handleCliRequest(ctx: RoutingContext) {
-        // Launch a coroutine to handle the request
         launch {
             try {
                 logger.info("Handling CLI request")
                 val command = ctx.queryParam("command").firstOrNull()
                 if (command != null) {
-                    val args = parseCommandToArgs(command)
-                    val (exitStatus, sarif) = executeCommand(args)
-                    sendSuccessResponse(ctx, exitStatus, sarif)
+                    // Use async for parallelism
+                    val result = async {
+                        executeCommand(parseCommandToArgs(command))
+                    }.await() // Wait for the result of the async execution
+                    logger.info(result.second)
+                    sendSuccessResponse(ctx, result.first, result.second)
                 } else {
                     sendErrorResponse(ctx, 400, "Command parameter is missing")
                 }
@@ -81,61 +88,117 @@ class OscalVerticle : CoroutineVerticle() {
     }
     private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
         return withContext(vertx.dispatcher()) {
-            val outputStream = ByteArrayOutputStream()
-            val errorStream = ByteArrayOutputStream()
-            val fileStream = ByteArrayOutputStream()
-            val command = args[0]
-            
-            // Get the webroot path
-            val resource: URL = javaClass.getResource("/webroot") 
-                ?: throw IllegalStateException("Webroot directory not found")
-            val uri: URI = resource.toURI()
-            
-            val webrootPath: Path = when {
-                uri.scheme == "jar" -> {
-                    val fs = FileSystems.newFileSystem(uri, emptyMap<String, Any>())
-                    fs.getPath("/webroot")
+            awaitBlocking {
+                val outputStream = ByteArrayOutputStream()
+                val errorStream = ByteArrayOutputStream()
+                val fileStream = ByteArrayOutputStream()
+                val command = args[0]
+                
+                // Get the webroot path
+                val resource: URL = javaClass.getResource("/webroot") 
+                    ?: throw IllegalStateException("Webroot directory not found")
+                val uri: URI = resource.toURI()
+                
+                val webrootPath: Path = when {
+                    uri.scheme == "jar" -> {
+                        val fs = FileSystems.newFileSystem(uri, emptyMap<String, Any>())
+                        fs.getPath("/webroot")
+                    }
+                    else -> Paths.get(uri)
                 }
-                else -> Paths.get(uri)
+                // Ensure webroot directory exists
+                if (!Files.exists(webrootPath) || !Files.isDirectory(webrootPath)) {
+                    throw IllegalStateException("Invalid webroot path: $webrootPath")
+                }
+        
+                // Create a mutable list from args
+                val mutableArgs = args.toMutableList()
+        
+                // Generate SARIF file name and path
+                val guid = UUID.randomUUID().toString()
+                val sarifFileName = "${guid}.sarif"
+                val sarifFilePath = webrootPath.resolve(sarifFileName).toString()
+                logger.info("SARIF file path: $sarifFilePath")
+        
+                // Add output file argument
+                mutableArgs.add("--sarif-include-pass")
+                mutableArgs.add("-o")
+                mutableArgs.add(sarifFilePath)
+        
+                val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs, outputStream, errorStream, fileStream)
+                val exitStatus = oscalCommandExecutor.execute()
+                logger.info("Command execution completed with status: $exitStatus")
+        
+                // Check if SARIF file was created
+                if (!File(sarifFilePath).exists()) {
+                    logger.warn("SARIF file not generated. Creating a basic SARIF file with error message.")
+                    val basicSarif = createBasicSarif(errorStream.toString())
+                    File(sarifFilePath).writeText(basicSarif)
+                }
+        
+                Pair(exitStatus, sarifFileName)
             }
-    
-            // Ensure webroot directory exists
-            if (!Files.exists(webrootPath) || !Files.isDirectory(webrootPath)) {
-                throw IllegalStateException("Invalid webroot path: $webrootPath")
-            }
-    
-            // Create a mutable list from args
-            val mutableArgs = args.toMutableList()
-    
-            // Generate SARIF file name and path
-            val guid = UUID.randomUUID().toString()
-            val sarifFileName = "${guid}.sarif"
-            val sarifFilePath = webrootPath.resolve(sarifFileName).toString()
-    
-            // Add output file argument
-            mutableArgs.add("--sarif-include-pass")
-            mutableArgs.add("-o")
-            mutableArgs.add(sarifFilePath)
-    
-            val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs, outputStream, errorStream, fileStream)
-            val exitStatus = oscalCommandExecutor.execute()
-    
-            val sarifContent = try {
-                File(sarifFilePath).readText()
-            } catch (e: Exception) {
-                "{result:'sarif failed', error: '${e.message}'}"
-            }
-    
-            Pair(exitStatus, sarifContent)
         }
     }
 
-    private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, output: String) {
-
+    private fun createBasicSarif(errorMessage: String): String {
+        return """
+        {
+          "${'$'}schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+          "version": "2.1.0",
+          "runs": [
+            {
+              "tool": {
+                "driver": {
+                  "name": "OSCAL Tool",
+                  "informationUri": "https://pages.nist.gov/OSCAL/",
+                  "version": "1.0.0"
+                }
+              },
+              "results": [
+                {
+                  "message": {
+                    "text": "Error occurred during OSCAL command execution: $errorMessage"
+                  },
+                  "level": "error"
+                }
+              ]
+            }
+          ]
+        }
+        """.trimIndent()
+    }
+    private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFileName: String) {
         ctx.response()
-            .setStatusCode(200)
-            .putHeader("content-type", "application/json")
-            .end(output)
+            .setStatusCode(302) // HTTP 302 Found (Redirect)
+            .putHeader("Location", "/$sarifFileName")
+            .end()
+    }
+    private suspend fun sendSarifFile(ctx: RoutingContext, sarifFilePath: String) {
+        val fs: FileSystem = vertx.fileSystem()
+        val filePath = sarifFilePath
+        
+        if (fs.existsBlocking(filePath)) {
+            ctx.response().apply {
+                putHeader("Content-Type", "application/sarif+json")
+                putHeader("Content-Disposition", "attachment; filename=\"$sarifFilePath\"")
+                sendFile(filePath).onComplete { ar ->
+                    if (ar.failed()) {
+                        logger.error("Failed to send SARIF file", ar.cause())
+                        sendErrorResponse(ctx, 500, "Failed to send SARIF file")
+                    } else {
+                        // Optionally delete the file after sending
+                        fs.delete(filePath) { deleteResult ->
+                            if (deleteResult.failed()) {
+                                logger.warn("Failed to delete SARIF file: $filePath", deleteResult.cause())
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            sendErrorResponse(ctx, 404, "SARIF file not found")
+        }
     }
 
     private fun sendErrorResponse(ctx: RoutingContext, statusCode: Int, message: String) {
