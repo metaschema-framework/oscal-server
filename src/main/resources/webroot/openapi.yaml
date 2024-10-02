@@ -14,7 +14,8 @@ paths:
           required: true
           schema:
             type: string
-          description: The CLI command to run
+            example: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
+          description: Validate remote oscal document from URI
       responses:
         '200':
           description: Successful response

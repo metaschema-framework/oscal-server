@@ -24,10 +24,12 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URL
 import java.net.URI
+import java.net.URLDecoder
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
+import java.nio.charset.StandardCharsets
 import io.vertx.kotlin.coroutines.awaitBlocking
 
 class OscalVerticle : CoroutineVerticle() {
@@ -99,8 +101,9 @@ class OscalVerticle : CoroutineVerticle() {
         launch {
             try {
                 logger.info("Handling CLI request")
-                val content = ctx.queryParam("content").firstOrNull()
-                if (content != null) {
+                val encodedContent = ctx.queryParam("content").firstOrNull()
+                val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
+                                if (content != null) {
                     // Use async for parallelism
                     val result = async {
                         executeCommand(parseCommandToArgs("validate "+content))
