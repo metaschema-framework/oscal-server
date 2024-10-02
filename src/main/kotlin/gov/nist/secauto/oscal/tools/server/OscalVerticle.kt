@@ -3,6 +3,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import java.util.UUID
 import io.vertx.ext.web.handler.StaticHandler
+import io.vertx.ext.web.handler.BodyHandler
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
@@ -42,12 +43,45 @@ class OscalVerticle : CoroutineVerticle() {
     private suspend fun createRouter(): Router {
         logger.info("Creating router")
         val options = OpenAPILoaderOptions()
-        val routerBuilder = RouterBuilder.create(vertx, "openapi.yaml", options).coAwait()
+        val routerBuilder = RouterBuilder.create(vertx, "webroot/openapi.yaml", options).coAwait()
         logger.info("Router builder created")
+        
+        // Add BodyHandler to handle file uploads
+        routerBuilder.rootHandler(BodyHandler.create().setHandleFileUploads(true))
+        
+        routerBuilder.operation("validateUpload").handler { ctx -> handleValidateFileUpload(ctx) }
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         val router = routerBuilder.createRouter()
         router.route("/*").handler(StaticHandler.create("webroot"))
         return router
+    }
+    private fun handleValidateFileUpload(ctx: RoutingContext) {
+        launch {
+            try {
+                logger.info("Handling file upload request")
+                val uploadedFiles = ctx.fileUploads()
+                if (uploadedFiles.isNotEmpty()) {
+                    val file = uploadedFiles.first()
+                    val tempFilePath = file.uploadedFileName()
+                    
+                    // Use async for parallelism
+                    val result = async {
+                        executeCommand(listOf("validate", tempFilePath))
+                    }.await() // Wait for the result of the async execution
+                    
+                    logger.info("Validation result: ${result.second}")
+                    sendSuccessResponse(ctx, result.first, result.second)
+                    
+                    // Clean up the temporary file
+                    vertx.fileSystem().delete(tempFilePath)
+                } else {
+                    sendErrorResponse(ctx, 400, "No file uploaded")
+                }
+            } catch (e: Exception) {
+                logger.error("Error handling file upload request", e)
+                sendErrorResponse(ctx, 500, "Internal server error")
+            }
+        }
     }
     private suspend fun startHttpServer(router: Router) {
         try {
@@ -74,7 +108,7 @@ class OscalVerticle : CoroutineVerticle() {
                     logger.info(result.second)
                     sendSuccessResponse(ctx, result.first, result.second)
                 } else {
-                    sendErrorResponse(ctx, 400, "Command parameter is missing")
+                    sendErrorResponse(ctx, 400, "content parameter is missing")
                 }
             } catch (e: Exception) {
                 logger.error("Error handling CLI request", e)
@@ -89,9 +123,6 @@ class OscalVerticle : CoroutineVerticle() {
     private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
         return withContext(vertx.dispatcher()) {
             awaitBlocking {
-                val outputStream = ByteArrayOutputStream()
-                val errorStream = ByteArrayOutputStream()
-                val fileStream = ByteArrayOutputStream()
                 val command = args[0]
                 
                 // Get the webroot path
@@ -128,14 +159,14 @@ class OscalVerticle : CoroutineVerticle() {
                 mutableArgs.add("-o")
                 mutableArgs.add(sarifFilePath)
         
-                val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs, outputStream, errorStream, fileStream)
+                val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs)
                 val exitStatus = oscalCommandExecutor.execute()
                 logger.info("Command execution completed with status: $exitStatus")
         
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
                     logger.warn("SARIF file not generated. Creating a basic SARIF file with error message.")
-                    val basicSarif = createBasicSarif(errorStream.toString())
+                    val basicSarif = createBasicSarif("Error")
                     File(sarifFilePath).writeText(basicSarif)
                 }
         

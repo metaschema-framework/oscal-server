@@ -1,0 +1,78 @@
+openapi: 3.0.0
+info:
+  title: OSCAL Tools CLI API
+  version: 1.0.0
+  description: API for running OSCAL Tools CLI commands
+paths:
+  /validate:
+    get:
+      operationId: validate
+      summary: Validate Oscal remote document
+      parameters:
+        - in: query
+          name: content
+          required: true
+          schema:
+            type: string
+          description: The CLI command to run
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:    
+              schema:
+                $ref: '#/components/schemas/SarifResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: validateUpload
+      summary: Validate Oscal document from uploaded file
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:    
+              schema:
+                $ref: '#/components/schemas/SarifResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    SarifResponse:
+      type: object
+      properties:
+        runs:
+          type: array
+        version:
+          type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

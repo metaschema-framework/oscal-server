@@ -27,9 +27,6 @@ import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
 open class OscalCommandExecutor(
     protected val command: String,
     protected val args: List<String>,
-    protected val outputStream: ByteArrayOutputStream,
-    protected val errorStream: ByteArrayOutputStream,
-    protected val fileStream: ByteArrayOutputStream
 ) : CLIProcessor("oscal-server"), ICommandExecutor {
 
     protected val logger: Logger = LogManager.getLogger(this::class.java)
@@ -159,12 +156,6 @@ open class OscalCommandExecutor(
         override fun handleInvalidCommand(message: String): ExitStatus {
             val status = ExitCode.INVALID_COMMAND.exitMessage(message)
             return status
-        }
-
-        fun showVersion() {
-            PrintWriter(outputStream, true, StandardCharsets.UTF_8).use { writer ->
-                writer.println("OSCAL Server Validator") // Replace with actual version info
-            }
         }
 
 
