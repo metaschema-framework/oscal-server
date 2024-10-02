@@ -125,7 +125,6 @@ class OscalVerticle : CoroutineVerticle() {
                 if(!mutableArgs.contains(("--sarif-include-pass"))){
                     mutableArgs.add("--sarif-include-pass")
                 }
-                // Add output file argument
                 mutableArgs.add("-o")
                 mutableArgs.add(sarifFilePath)
         
@@ -140,7 +139,7 @@ class OscalVerticle : CoroutineVerticle() {
                     File(sarifFilePath).writeText(basicSarif)
                 }
         
-                Pair(exitStatus, sarifFileName)
+                Pair(exitStatus, sarifFilePath)
             }
         }
     }
@@ -172,37 +171,11 @@ class OscalVerticle : CoroutineVerticle() {
         }
         """.trimIndent()
     }
-    private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFileName: String) {
+    private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFilePath: String) {
         ctx.response()
-            .setStatusCode(302) // HTTP 302 Found (Redirect)
-            .putHeader("Location", "/$sarifFileName")
-            .end()
-    }
-    private suspend fun sendSarifFile(ctx: RoutingContext, sarifFilePath: String) {
-        val fs: FileSystem = vertx.fileSystem()
-        val filePath = sarifFilePath
-        
-        if (fs.existsBlocking(filePath)) {
-            ctx.response().apply {
-                putHeader("Content-Type", "application/sarif+json")
-                putHeader("Content-Disposition", "attachment; filename=\"$sarifFilePath\"")
-                sendFile(filePath).onComplete { ar ->
-                    if (ar.failed()) {
-                        logger.error("Failed to send SARIF file", ar.cause())
-                        sendErrorResponse(ctx, 500, "Failed to send SARIF file")
-                    } else {
-                        // Optionally delete the file after sending
-                        fs.delete(filePath) { deleteResult ->
-                            if (deleteResult.failed()) {
-                                logger.warn("Failed to delete SARIF file: $filePath", deleteResult.cause())
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            sendErrorResponse(ctx, 404, "SARIF file not found")
-        }
+            .setStatusCode(200) // HTTP 200 OK
+            .putHeader("Content-Type", "application/json")
+            .sendFile(sarifFilePath)
     }
 
     private fun sendErrorResponse(ctx: RoutingContext, statusCode: Int, message: String) {
