@@ -119,9 +119,13 @@ class OscalVerticle : CoroutineVerticle() {
                 val sarifFileName = "${guid}.sarif"
                 val sarifFilePath = webrootPath.resolve(sarifFileName).toString()
                 logger.info("SARIF file path: $sarifFilePath")
-        
+                if(mutableArgs.contains(("-o"))){
+                    throw Error("Do not specify sarif file")
+                }
+                if(!mutableArgs.contains(("--sarif-include-pass"))){
+                    mutableArgs.add("--sarif-include-pass")
+                }
                 // Add output file argument
-                mutableArgs.add("--sarif-include-pass")
                 mutableArgs.add("-o")
                 mutableArgs.add(sarifFilePath)
         
