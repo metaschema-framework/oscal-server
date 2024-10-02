@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
-  title: OSCAL Tools CLI API
+  title: OSCAL SERVER
   version: 1.0.0
-  description: API for running OSCAL Tools CLI commands
+  description: API for validating OSCAL Content
 paths:
   /validate:
     get:

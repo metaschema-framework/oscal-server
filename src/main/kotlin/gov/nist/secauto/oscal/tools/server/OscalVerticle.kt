@@ -31,6 +31,7 @@ import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.charset.StandardCharsets
 import io.vertx.kotlin.coroutines.awaitBlocking
+import kotlin.io.path.appendText
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
@@ -48,8 +49,9 @@ class OscalVerticle : CoroutineVerticle() {
         val routerBuilder = RouterBuilder.create(vertx, "webroot/openapi.yaml", options).coAwait()
         logger.info("Router builder created")
         
+
         // Add BodyHandler to handle file uploads
-        routerBuilder.rootHandler(BodyHandler.create().setHandleFileUploads(true))
+        routerBuilder.rootHandler(BodyHandler.create("webroot"))
         
         routerBuilder.operation("validateUpload").handler { ctx -> handleValidateFileUpload(ctx) }
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
@@ -58,26 +60,34 @@ class OscalVerticle : CoroutineVerticle() {
         return router
     }
     private fun handleValidateFileUpload(ctx: RoutingContext) {
+        logger.info("Handling file upload request!")
         launch {
             try {
-                logger.info("Handling file upload request")
-                val uploadedFiles = ctx.fileUploads()
-                if (uploadedFiles.isNotEmpty()) {
-                    val file = uploadedFiles.first()
-                    val tempFilePath = file.uploadedFileName()
-                    
+                logger.info("Handling file upload request in the background")
+                val body = ctx.body().asString()
+                logger.info("Received body: $body")
+    
+                if (body.isNotEmpty()) {
+                    // Create a temporary file
+                    val tempFile = kotlin.io.path.createTempFile(prefix = "upload", suffix = ".tmp")
+                    val tempFilePath = tempFile.toAbsolutePath()
+                    logger.info("Created temporary file: $tempFilePath")
+    
+                    // Write the body content to the temporary file
+                    tempFile.appendText(body)
+                    logger.info("Wrote body content to temporary file")
+    
                     // Use async for parallelism
                     val result = async {
-                        executeCommand(listOf("validate", tempFilePath))
+                        executeCommand(listOf("validate", tempFilePath.toString()))
                     }.await() // Wait for the result of the async execution
                     
                     logger.info("Validation result: ${result.second}")
                     sendSuccessResponse(ctx, result.first, result.second)
                     
                     // Clean up the temporary file
-                    vertx.fileSystem().delete(tempFilePath)
                 } else {
-                    sendErrorResponse(ctx, 400, "No file uploaded")
+                    sendErrorResponse(ctx, 400, "No content in request body")
                 }
             } catch (e: Exception) {
                 logger.error("Error handling file upload request", e)
