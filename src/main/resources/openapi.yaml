@@ -4,13 +4,13 @@ info:
   version: 1.0.0
   description: API for running OSCAL Tools CLI commands
 paths:
-  /oscal:
+  /validate:
     get:
-      operationId: oscal
-      summary: Run an OSCAL Tools CLI command
+      operationId: validate
+      summary: Validate Oscal remote document
       parameters:
         - in: query
-          name: command
+          name: content
           required: true
           schema:
             type: string
@@ -23,15 +23,9 @@ paths:
               schema:
                 type: object
                 properties:
-                  exitCode:
-                    type: integer
-                  status:
-                    type: string
-                  output:
-                    type: string
-                  errors:
-                    type: string
-                  sarif:
+                  runs:
+                    type: array
+                  version:
                     type: string
         '400':
           description: Bad request

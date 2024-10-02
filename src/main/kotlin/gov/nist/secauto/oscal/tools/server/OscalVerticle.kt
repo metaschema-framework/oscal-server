@@ -44,7 +44,7 @@ class OscalVerticle : CoroutineVerticle() {
         val options = OpenAPILoaderOptions()
         val routerBuilder = RouterBuilder.create(vertx, "openapi.yaml", options).coAwait()
         logger.info("Router builder created")
-        routerBuilder.operation("oscal").handler { ctx -> handleCliRequest(ctx) }
+        routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         val router = routerBuilder.createRouter()
         router.route("/*").handler(StaticHandler.create("webroot"))
         return router
@@ -61,15 +61,15 @@ class OscalVerticle : CoroutineVerticle() {
         }
     }
 
-    private fun handleCliRequest(ctx: RoutingContext) {
+    private fun handleValidateRequest(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling CLI request")
-                val command = ctx.queryParam("command").firstOrNull()
-                if (command != null) {
+                val content = ctx.queryParam("content").firstOrNull()
+                if (content != null) {
                     // Use async for parallelism
                     val result = async {
-                        executeCommand(parseCommandToArgs(command))
+                        executeCommand(parseCommandToArgs("validate "+content))
                     }.await() // Wait for the result of the async execution
                     logger.info(result.second)
                     sendSuccessResponse(ctx, result.first, result.second)
@@ -172,10 +172,11 @@ class OscalVerticle : CoroutineVerticle() {
         """.trimIndent()
     }
     private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFilePath: String) {
+        val fileContent = File(sarifFilePath).readText()
         ctx.response()
             .setStatusCode(200) // HTTP 200 OK
             .putHeader("Content-Type", "application/json")
-            .sendFile(sarifFilePath)
+            .end(fileContent)
     }
 
     private fun sendErrorResponse(ctx: RoutingContext, statusCode: Int, message: String) {

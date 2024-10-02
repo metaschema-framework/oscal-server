@@ -41,14 +41,16 @@ class TestOscalVerticle {
     fun test_oscal_command(testContext: TestContext) {
         val async = testContext.async()
 
-        webClient.get("/oscal")
-            .addQueryParam("command", "validate https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml")
+        webClient.get("/validate")
+            .addQueryParam("content", "https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml")
             .send { ar ->
                 if (ar.succeeded()) {
                     val response = ar.result()
                     testContext.assertEquals(200, response.statusCode())
                     val body = response.bodyAsJsonObject()
                     testContext.assertNotNull(body)
+                    testContext.assertTrue(body.containsKey("runs"))
+                    // New assertion to check output length
                     async.complete()
                 } else {
                     testContext.fail(ar.cause())
