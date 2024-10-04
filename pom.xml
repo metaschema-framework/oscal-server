@@ -9,6 +9,7 @@
   <version>1.0.0-SNAPSHOT</version>
 
   <properties>
+    
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <kotlin.version>1.7.21</kotlin.version>
@@ -26,8 +27,7 @@
     <metaschema-framework.version>1.1.0</metaschema-framework.version>
     <liboscal-java.version>4.1.0</liboscal-java.version>
     <dependency.log4j2.version>2.23.1</dependency.log4j2.version>
-    <main.verticle>gov.nist.secauto.oscal.tools.server.OscalVerticle</main.verticle>
-    <launcher.class>io.vertx.core.Launcher</launcher.class>
+    <main.class>gov.nist.secauto.oscal.tools.server.OscalVerticle</main.class>
   </properties>
 
   <dependencyManagement>
@@ -329,7 +329,7 @@
         <configuration>
           <programs>
             <program>
-              <mainClass>${launcher.class}</mainClass>
+              <mainClass>${main.class}</mainClass>
               <id>oscal-server</id>
             </program>
           </programs>
@@ -351,23 +351,25 @@
               <goal>assemble</goal>
             </goals>
             <configuration>
-              <useWildcardClassPath>true</useWildcardClassPath>
-              <platforms>windows</platforms>
+              <platforms>
+                <platform>windows</platform>
+              </platforms>
             </configuration>
           </execution>
           <execution>
-            <id>exec-oscal-server-bash</id>
+            <id>exec-oscal-server-unix</id>
             <phase>package</phase>
             <goals>
               <goal>assemble</goal>
             </goals>
             <configuration>
-              <platforms>unix</platforms>
+              <platforms>
+                <platform>unix</platform>
+              </platforms>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>

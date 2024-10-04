@@ -1,4 +1,5 @@
 package gov.nist.secauto.oscal.tools.server
+import io.vertx.core.Vertx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import java.util.UUID
@@ -289,5 +290,12 @@ class OscalVerticle : CoroutineVerticle() {
             .setStatusCode(statusCode)
             .putHeader("content-type", "application/json")
             .end(JsonObject().put("error", message).encode())
+    }
+    companion object {
+        @JvmStatic
+        fun main(args: Array<String>) {
+            val vertx = Vertx.vertx()
+            vertx.deployVerticle(OscalVerticle())
+        }
     }
 }
