@@ -2,34 +2,34 @@ openapi: 3.0.0
 info:
   title: OSCAL SERVER
   version: 1.0.0
-  description: API for validating OSCAL Content
+  description: API for validating, resolving, and converting OSCAL Content
+
 paths:
   /validate:
     get:
       operationId: validate
-      summary: Validate Oscal remote document
+      summary: Validate remote OSCAL document
       parameters:
         - in: query
           name: content
           required: true
           schema:
             type: string
-            example: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
-          description: Validate remote oscal document from URI
+            format: uri
+          description: URI of the remote OSCAL document to validate
+          example: 
+            - https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/content/ssp-all-VALID.xml
       responses:
         '200':
-          description: Successful response
-          content:
-            application/json:    
-              schema:
-                $ref: '#/components/schemas/SarifResponse'
+          $ref: '#/components/responses/SarifResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
+    
     post:
       operationId: validateUpload
-      summary: Validate Oscal document from uploaded file
+      summary: Validate uploaded OSCAL document
       requestBody:
         required: true
         content:
@@ -39,11 +39,47 @@ paths:
               format: binary
       responses:
         '200':
-          description: Successful response
-          content:
-            application/json:    
-              schema:
-                $ref: '#/components/schemas/SarifResponse'
+          $ref: '#/components/responses/SarifResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /resolve:
+    get:
+      operationId: resolve
+      summary: Resolve OSCAL local document
+      parameters:
+        - in: query
+          name: content
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Absolute Path of the local OSCAL document to resolve
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /convert:
+    get:
+      operationId: convert
+      summary: Convert OSCAL document
+      parameters:
+        - in: query
+          name: content
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: URI of the remote OSCAL document to convert
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -54,23 +90,51 @@ components:
     SarifResponse:
       type: object
       properties:
-        runs:
-          type: array
         version:
           type: string
+        runs:
+          type: array
+          items:
+            type: object
+
+    OscalContent:
+      type: object
+      description: OSCAL content (structure depends on the specific OSCAL format)
+
     Error:
       type: object
       properties:
         error:
           type: string
-  
+
   responses:
+    SarifResponse:
+      description: Successful SARIF response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SarifResponse'
+
+    OscalResponse:
+      description: Successful OSCAL response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OscalContent'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/OscalContent'
+        application/x-yaml:
+          schema:
+            $ref: '#/components/schemas/OscalContent'
+
     BadRequest:
       description: Bad request
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
     InternalServerError:
       description: Internal server error
       content:

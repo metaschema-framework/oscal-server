@@ -5,6 +5,7 @@ import java.util.UUID
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.handler.BodyHandler
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
+import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.openapi.OpenAPILoaderOptions
@@ -55,6 +56,8 @@ class OscalVerticle : CoroutineVerticle() {
         
         routerBuilder.operation("validateUpload").handler { ctx -> handleValidateFileUpload(ctx) }
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
+        routerBuilder.operation("resolve").handler { ctx -> handleResolveRequest(ctx) }
+        routerBuilder.operation("convert").handler { ctx -> handleConvertRequest(ctx) }
         val router = routerBuilder.createRouter()
         router.route("/*").handler(StaticHandler.create("webroot"))
         return router
@@ -110,13 +113,71 @@ class OscalVerticle : CoroutineVerticle() {
     private fun handleValidateRequest(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling CLI request")
+                logger.info("Handling Validate request")
                 val encodedContent = ctx.queryParam("content").firstOrNull()
                 val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
                                 if (content != null) {
                     // Use async for parallelism
                     val result = async {
                         executeCommand(parseCommandToArgs("validate "+content))
+                    }.await() // Wait for the result of the async execution
+                    logger.info(result.second)
+                    sendSuccessResponse(ctx, result.first, result.second)
+                } else {
+                    sendErrorResponse(ctx, 400, "content parameter is missing")
+                }
+            } catch (e: Exception) {
+                logger.error("Error handling CLI request", e)
+                sendErrorResponse(ctx, 500, "Internal server error")
+            }
+        }
+    }
+    private fun handleResolveRequest(ctx: RoutingContext) {
+        launch {
+            try {
+                logger.info("Handling Resolve request")
+                val encodedContent = ctx.queryParam("content").firstOrNull()
+                val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
+                val acceptHeader = ctx.request().getHeader("Accept")
+                val format = mapMimeTypeToFormat(acceptHeader)
+                
+                if (content != null) {
+                    // Use async for parallelism
+                    val result = async {
+                        executeCommand(parseCommandToArgs("resolve-profile $content --to=$format"))
+                    }.await() // Wait for the result of the async execution
+                    logger.info(result.second)
+                    sendSuccessResponse(ctx, result.first, result.second)
+                } else {
+                    sendErrorResponse(ctx, 400, "content parameter is missing")
+                }
+            } catch (e: Exception) {
+                logger.error("Error handling CLI request", e)
+                sendErrorResponse(ctx, 500, "Internal server error")
+            }
+        }
+    }
+    private fun mapMimeTypeToFormat(mimeType: String?): String {
+        return when (mimeType) {
+            "application/json" -> "JSON"
+            "application/xml" -> "XML"
+            "application/x-yaml" -> "YAML"
+            else -> "JSON" // Default to JSON if no valid MIME type is provided
+        }
+    }
+    private fun handleConvertRequest(ctx: RoutingContext) {
+        launch {
+            try {
+                logger.info("Handling Convert request")
+                val encodedContent = ctx.queryParam("content").firstOrNull()
+                val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
+                val acceptHeader = ctx.request().getHeader("Accept")
+                val format = mapMimeTypeToFormat(acceptHeader)
+                
+                if (content != null) {
+                    // Use async for parallelism
+                    val result = async {
+                        executeCommand(parseCommandToArgs("convert $content --to=$format"))
                     }.await() // Wait for the result of the async execution
                     logger.info(result.second)
                     sendSuccessResponse(ctx, result.first, result.second)
@@ -166,20 +227,20 @@ class OscalVerticle : CoroutineVerticle() {
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
                 }
-                if(!mutableArgs.contains(("--sarif-include-pass"))){
-                    mutableArgs.add("--sarif-include-pass")
+                if (mutableArgs[0]=="validate"){
+                    if(!mutableArgs.contains(("--sarif-include-pass"))){
+                        mutableArgs.add("--sarif-include-pass")
+                    }
+                    mutableArgs.add("-o")    
                 }
-                mutableArgs.add("-o")
                 mutableArgs.add(sarifFilePath)
-        
+
                 val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs)
                 val exitStatus = oscalCommandExecutor.execute()
-                logger.info("Command execution completed with status: $exitStatus")
         
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
-                    logger.warn("SARIF file not generated. Creating a basic SARIF file with error message.")
-                    val basicSarif = createBasicSarif("Error")
+                    val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
                     File(sarifFilePath).writeText(basicSarif)
                 }
         

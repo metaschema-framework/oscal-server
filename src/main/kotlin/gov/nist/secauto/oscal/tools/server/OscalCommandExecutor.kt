@@ -23,6 +23,7 @@ import java.util.LinkedList
 import java.util.Deque
 import gov.nist.secauto.oscal.tools.cli.core.commands.ConvertCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
+import gov.nist.secauto.oscal.tools.cli.core.commands.ResolveCommand
 
 open class OscalCommandExecutor(
     protected val command: String,
@@ -32,7 +33,8 @@ open class OscalCommandExecutor(
     protected val logger: Logger = LogManager.getLogger(this::class.java)
     protected open val commands: Map<String, () -> ICommand> = mapOf(
         "validate" to ::ValidateCommand,
-        "convert" to ::ConvertCommand
+        "convert" to ::ConvertCommand,
+        "resolve-profile" to ::ResolveCommand
     )
 
     protected open fun getBindingContext(): IBindingContext {
