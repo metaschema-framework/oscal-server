@@ -19,6 +19,7 @@
     <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
 
     <vertx.version>4.5.10</vertx.version>
+    <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
     <oscal-cli.version>2.1.0</oscal-cli.version>
     <metaschema-framework.version>1.1.0</metaschema-framework.version>
     <liboscal-java.version>4.1.0</liboscal-java.version>
@@ -29,6 +30,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>gov.nist.secauto.swid</groupId>
+        <artifactId>swid-maven-plugin</artifactId>
+        <version>${swid-maven-plugin.version}</version>
+      </dependency>
       <dependency>
         <groupId>io.github.hakky54</groupId>
         <artifactId>consolecaptor</artifactId>
@@ -236,12 +242,14 @@
         </dependencies>
         <executions>
           <execution>
+            <?m2e execute onConfiguration,onIncremental?>
             <id>compile</id>
             <goals>
               <goal>compile</goal>
             </goals>
           </execution>
           <execution>
+            <?m2e execute onConfiguration,onIncremental?>
             <id>test-compile</id>
             <goals>
               <goal>test-compile</goal>
@@ -294,6 +302,112 @@
             <argument>-Xmx1024m</argument>
           </arguments>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>${launcher.class}</mainClass>
+              <addClasspath>true</addClasspath>
+              <classpathLayoutType>custom</classpathLayoutType>
+              <customClasspathLayout>
+                ${artifact.groupId}.${artifact.artifactId}-${artifact.version}.${artifact.extension}
+              </customClasspathLayout>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <version>2.1.0</version>
+        <configuration>
+          <programs>
+            <program>
+              <mainClass>${launcher.class}</mainClass>
+              <id>oscal-server</id>
+            </program>
+          </programs>
+          <generateRepository>false</generateRepository>
+          <repositoryLayout>flat</repositoryLayout>
+          <repositoryName>lib</repositoryName>
+          <outputFileNameMapping>
+            @{groupId}@.@{artifactId}@-@{version}@.@{extension}@
+          </outputFileNameMapping>
+          <extraJvmArguments>-Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</extraJvmArguments>
+          <projectArtifactFirstInClassPath>true</projectArtifactFirstInClassPath>
+          <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>
+        </configuration>
+        <executions>
+          <execution>
+            <id>exec-oscal-server-windows</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+            <configuration>
+              <useWildcardClassPath>true</useWildcardClassPath>
+              <platforms>windows</platforms>
+            </configuration>
+          </execution>
+          <execution>
+            <id>exec-oscal-server-bash</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+            <configuration>
+              <platforms>unix</platforms>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>make-assembly-bin</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/bin.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>gov.nist.secauto.swid</groupId>
+            <artifactId>swid-maven-plugin</artifactId>
+            <version>${swid-maven-plugin.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>make-assembly-bin</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/bin.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
