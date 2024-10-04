@@ -55,6 +55,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./target/server-${{ steps.get_version.outputs.VERSION }}-SNAPSHOT-oscal-server.zip
+        asset_path: ./target/server-${{ steps.get_version.outputs.VERSION }}-oscal-server.zip
         asset_name: oscal-server-${{ steps.get_version.outputs.VERSION }}.zip
         asset_content_type: application/zip
