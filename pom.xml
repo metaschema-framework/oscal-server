@@ -17,7 +17,9 @@
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
     <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
-
+    <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
+    <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
+  
     <vertx.version>4.5.10</vertx.version>
     <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
     <oscal-cli.version>2.1.0</oscal-cli.version>
@@ -369,6 +371,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven-assembly-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>gov.nist.secauto.swid</groupId>
+            <artifactId>swid-maven-plugin</artifactId>
+            <version>${swid-maven-plugin.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <id>make-assembly-bin</id>
