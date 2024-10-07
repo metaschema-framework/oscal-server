@@ -18,7 +18,7 @@ paths:
             format: uri
           description: URI of the remote OSCAL document to validate
           example: 
-            - https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/content/ssp-all-VALID.xml
+            - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
       responses:
         '200':
           $ref: '#/components/responses/SarifResponse'
