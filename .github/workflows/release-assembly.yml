@@ -17,6 +17,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Set up JDK 17
       uses: actions/setup-java@v3
@@ -28,16 +30,27 @@ jobs:
     - name: Build with Maven
       run: mvn clean package
 
-    - name: Get version and set release name
+    - name: Get version and set release info
       id: get_version
       run: |
         if [[ $GITHUB_REF == refs/tags/v* ]]; then
-          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_OUTPUT
           echo "RELEASE_NAME=Release $VERSION" >> $GITHUB_OUTPUT
+          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
         else
-          echo "VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION-$COMMIT_HASH-$TIMESTAMP" >> $GITHUB_OUTPUT
           echo "RELEASE_NAME=Release $VERSION ($(date +'%Y-%m-%d %H:%M:%S'))" >> $GITHUB_OUTPUT
+          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
         fi
+
+    - name: List target directory
+      run: ls -l target/
 
     - name: Create Release
       id: create_release
@@ -45,10 +58,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.get_version.outputs.VERSION }}
+        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
         release_name: ${{ steps.get_version.outputs.RELEASE_NAME }}
         draft: false
-        prerelease: false
+        prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1

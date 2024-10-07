@@ -287,6 +287,7 @@ class OscalVerticle : CoroutineVerticle() {
         ctx.response()
             .setStatusCode(200) // HTTP 200 OK
             .putHeader("Content-Type", "application/json")
+            .putHeader("Exit-Status", exitStatus.toString())
             .end(fileContent)
     }
 
