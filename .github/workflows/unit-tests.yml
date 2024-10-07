@@ -1,4 +1,4 @@
-name: Release Assembly
+name: Run unit tests
 
 on:
     push:
