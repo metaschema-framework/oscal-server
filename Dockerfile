@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: none
+# SPDX-License-Identifier: CC0-1.0
 # Start with a base image containing Java 17
 FROM eclipse-temurin:17-jdk-focal
 
