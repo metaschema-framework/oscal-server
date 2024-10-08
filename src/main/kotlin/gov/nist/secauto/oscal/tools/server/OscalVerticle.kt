@@ -77,6 +77,33 @@ class OscalVerticle : CoroutineVerticle() {
         router.route("/*").handler(StaticHandler.create("webroot"))
         return router
     }
+    private fun processUrl(url: String): String {
+        return if (url.startsWith("file://")) {
+            try {
+                val uri = URI(url)
+                val path = when {
+                    uri.authority != null -> {
+                        // Remove the authority component
+                        Paths.get(uri.authority + uri.path)
+                    }
+                    uri.path.startsWith("/") -> {
+                        // Absolute path
+                        Paths.get(uri.path)
+                    }
+                    else -> {
+                        // Relative path
+                        Paths.get(uri.path).toAbsolutePath()
+                    }
+                }
+                path.toString()
+            } catch (e: Exception) {
+                logger.error("Error processing file URL: $url", e)
+                url // Return original URL if processing fails
+            }
+        } else {
+            url
+        }
+    }
     private fun handleValidateFileUpload(ctx: RoutingContext) {
         logger.info("Handling file upload request!")
         launch {
@@ -98,11 +125,15 @@ class OscalVerticle : CoroutineVerticle() {
     
                     // Use async for parallelism
                     val result = async {
-                        executeCommand(listOf("validate", tempFilePath.toString()))
+                        executeCommand(listOf("validate", tempFilePath.toString(),"--show-stack-trace"))
                     }.await() // Wait for the result of the async execution
                     
                     logger.info("Validation result: ${result.second}")
-                    sendSuccessResponse(ctx, result.first, result.second)
+                    if(result.first.exitCode.toString()==="OK"){
+                        sendSuccessResponse(ctx, result.first, result.second)
+                    }else{
+                        sendErrorResponse(ctx, 400, result.first.exitCode.toString())
+                    }
                     
                     // Clean up the temporary file
                 } else {
@@ -131,11 +162,16 @@ class OscalVerticle : CoroutineVerticle() {
             try {
                 logger.info("Handling Validate request")
                 val encodedContent = ctx.queryParam("content").firstOrNull()
-                val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
-                                if (content != null) {
+                if (encodedContent != null) {
+                    val content = processUrl(encodedContent)
                     // Use async for parallelism
                     val result = async {
-                        executeCommand(parseCommandToArgs("validate "+content))
+                        try{
+                        executeCommand(listOf("validate",content,"--show-stack-trace"))
+                        }catch (e: Exception) {
+                            logger.error("Error handling request", e)
+                            executeCommand(listOf("validate",content,"--show-stack-trace"))
+                        }
                     }.await() // Wait for the result of the async execution
                     logger.info(result.second)
                     sendSuccessResponse(ctx, result.first, result.second)
@@ -143,7 +179,7 @@ class OscalVerticle : CoroutineVerticle() {
                     sendErrorResponse(ctx, 400, "content parameter is missing")
                 }
             } catch (e: Exception) {
-                logger.error("Error handling CLI request", e)
+                logger.error("Error handling request", e)
                 sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
@@ -151,13 +187,11 @@ class OscalVerticle : CoroutineVerticle() {
     private fun handleResolveRequest(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling Resolve request")
-                val encodedContent = ctx.queryParam("content").firstOrNull()
-                val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
-                val acceptHeader = ctx.request().getHeader("Accept")
-                val format = mapMimeTypeToFormat(acceptHeader)
-                
-                if (content != null) {
+            val encodedContent = ctx.queryParam("content").firstOrNull()
+                if (encodedContent != null) {
+                    val content = processUrl(encodedContent)
+                    val acceptHeader = ctx.request().getHeader("Accept")
+                    val format = mapMimeTypeToFormat(acceptHeader)
                     // Use async for parallelism
                     val result = async {
                         executeCommand(parseCommandToArgs("resolve-profile $content --to=$format"))
@@ -184,14 +218,11 @@ class OscalVerticle : CoroutineVerticle() {
     private fun handleConvertRequest(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling Convert request")
-                val encodedContent = ctx.queryParam("content").firstOrNull()
-                val content = encodedContent?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.name()) }
-                val acceptHeader = ctx.request().getHeader("Accept")
-                val format = mapMimeTypeToFormat(acceptHeader)
-                
-                if (content != null) {
-                    // Use async for parallelism
+            val encodedContent = ctx.queryParam("content").firstOrNull()
+                if (encodedContent != null) {
+                    val content = processUrl(encodedContent)
+                    val acceptHeader = ctx.request().getHeader("Accept")
+                    val format = mapMimeTypeToFormat(acceptHeader)
                     val result = async {
                         executeCommand(parseCommandToArgs("convert $content --to=$format"))
                     }.await() // Wait for the result of the async execution
@@ -281,13 +312,14 @@ class OscalVerticle : CoroutineVerticle() {
         ctx.response()
             .setStatusCode(200) // HTTP 200 OK
             .putHeader("Content-Type", "application/json")
-            .putHeader("Exit-Status", exitStatus.toString())
+            .putHeader("Exit-Status", exitStatus.exitCode.toString())
             .end(fileContent)
     }
 
     private fun sendErrorResponse(ctx: RoutingContext, statusCode: Int, message: String) {
         ctx.response()
             .setStatusCode(statusCode)
+            .putHeader("Exit-Status", statusCode.toString())
             .putHeader("content-type", "application/json")
             .end(JsonObject().put("error", message).encode())
     }
