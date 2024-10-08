@@ -297,7 +297,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>${exec-maven-plugin.version}</version>
         <configuration>
-          <mainClass>${launcher.class}</mainClass>
+          <mainClass>${main.class}</mainClass>
           <arguments>
             <argument>run</argument>
             <argument>${main.verticle}</argument>
