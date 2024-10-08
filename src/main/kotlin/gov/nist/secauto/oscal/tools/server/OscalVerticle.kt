@@ -42,13 +42,22 @@ import kotlin.io.path.appendText
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
+    private lateinit var oscalDir: Path
 
     override suspend fun start() {
         VertxOptions().setEventLoopPoolSize(8)
+        initializeOscalDirectory()
         val router = createRouter()
         startHttpServer(router)
     }
-
+    private fun initializeOscalDirectory() {
+        val homeDir = System.getProperty("user.home")
+        oscalDir = Paths.get(homeDir, ".oscal")
+        if (!Files.exists(oscalDir)) {
+            Files.createDirectory(oscalDir)
+        }
+        logger.info("OSCAL directory initialized at: $oscalDir")
+    }
 
     private suspend fun createRouter(): Router {
         logger.info("Creating router")
@@ -78,7 +87,8 @@ class OscalVerticle : CoroutineVerticle() {
     
                 if (body.isNotEmpty()) {
                     // Create a temporary file
-                    val tempFile = kotlin.io.path.createTempFile(prefix = "upload", suffix = ".tmp")
+                    val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
+
                     val tempFilePath = tempFile.toAbsolutePath()
                     logger.info("Created temporary file: $tempFilePath")
     
@@ -204,31 +214,14 @@ class OscalVerticle : CoroutineVerticle() {
         return withContext(vertx.dispatcher()) {
             awaitBlocking {
                 val command = args[0]
-                
-                // Get the webroot path
-                val resource: URL = javaClass.getResource("/webroot") 
-                    ?: throw IllegalStateException("Webroot directory not found")
-                val uri: URI = resource.toURI()
-                
-                val webrootPath: Path = when {
-                    uri.scheme == "jar" -> {
-                        val fs = FileSystems.newFileSystem(uri, emptyMap<String, Any>())
-                        fs.getPath("/webroot")
-                    }
-                    else -> Paths.get(uri)
-                }
-                // Ensure webroot directory exists
-                if (!Files.exists(webrootPath) || !Files.isDirectory(webrootPath)) {
-                    throw IllegalStateException("Invalid webroot path: $webrootPath")
-                }
-        
+                                
                 // Create a mutable list from args
                 val mutableArgs = args.toMutableList()
         
                 // Generate SARIF file name and path
                 val guid = UUID.randomUUID().toString()
                 val sarifFileName = "${guid}.sarif"
-                val sarifFilePath = webrootPath.resolve(sarifFileName).toString()
+                val sarifFilePath = oscalDir.resolve(sarifFileName).toString()
                 logger.info("SARIF file path: $sarifFilePath")
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
@@ -284,6 +277,7 @@ class OscalVerticle : CoroutineVerticle() {
     }
     private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFilePath: String) {
         val fileContent = File(sarifFilePath).readText()
+        File(sarifFilePath).delete()
         ctx.response()
             .setStatusCode(200) // HTTP 200 OK
             .putHeader("Content-Type", "application/json")
