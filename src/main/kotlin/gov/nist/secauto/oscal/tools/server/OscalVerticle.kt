@@ -184,7 +184,7 @@ class OscalVerticle : CoroutineVerticle() {
                     val args = mutableListOf("validate", content, "--show-stack-trace")
                     constraint.forEach { constraint_document ->
                         args.add("-c")
-                        args.add(constraint_document)
+                        args.add(processUrl(constraint_document))
                     }
                     flags.forEach { flag ->
                         args.add(flagToParam(flag))
