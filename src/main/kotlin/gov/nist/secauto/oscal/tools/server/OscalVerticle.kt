@@ -178,12 +178,16 @@ class OscalVerticle : CoroutineVerticle() {
                 logger.info("Handling Validate request")
                 val encodedContent = ctx.queryParam("document").firstOrNull()
                 val constraint = ctx.queryParam("constraint")
+                val flags = ctx.queryParam("flags")
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
                     val args = mutableListOf("validate", content, "--show-stack-trace")
                     constraint.forEach { constraint_document ->
                         args.add("-c")
                         args.add(constraint_document)
+                    }
+                    flags.forEach { flag ->
+                        args.add(flagToParam(flag))
                     }
                     val result = async {
                         try {
@@ -253,15 +257,24 @@ class OscalVerticle : CoroutineVerticle() {
             // Default to JSON if neither a valid formatParam nor MIME type is provided
             return "JSON"
         }
+
+
         private fun mapFormatToMimeType(format: String?): String {
-        return when (format) {
-            "JSON"->"application/json"
-            "XML"->"text/xml"
-            "YAML" -> "text/yaml"
-            else -> "application/json" // Default to JSON if no valid MIME type is provided
+            return when (format) {
+                "JSON"->"application/json"
+                "XML"->"text/xml"
+                "YAML" -> "text/yaml"
+                else -> "application/json" // Default to JSON if no valid MIME type is provided
+            }
         }
-    }
-    private fun handleConvertRequest(ctx: RoutingContext) {
+         private fun flagToParam(format: String): String {
+            return when (format) {
+                "disable-schema"->"--disable-schema-validation"
+                "disable-constraint"->"--disable-constraint-validation"
+                else -> "application/json" // Default to JSON if no valid MIME type is provided
+            }
+        }
+        private fun handleConvertRequest(ctx: RoutingContext) {
         launch {
             try {
             val encodedContent = ctx.queryParam("document").firstOrNull()
