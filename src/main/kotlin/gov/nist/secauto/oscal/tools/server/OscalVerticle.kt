@@ -211,12 +211,14 @@ class OscalVerticle : CoroutineVerticle() {
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
                     val acceptHeader = ctx.request().getHeader("Accept")
-                    val format = mapMimeTypeToFormat(acceptHeader)
+                    var formatParam = ctx.queryParam("format").firstOrNull()
+                    val format = mapMimeTypeToFormat(acceptHeader,formatParam)
                     // Use async for parallelism
                     val result = async {
                         executeCommand(parseCommandToArgs("resolve-profile $content --to=$format"))
                     }.await() // Wait for the result of the async execution
                     logger.info(result.second)
+                    ctx.response().putHeader("Content-Type", mapFormatToMimeType(format))
                     sendSuccessResponse(ctx, result.first, result.second)
                 } else {
                     sendErrorResponse(ctx, 400, "content parameter is missing")
@@ -227,15 +229,36 @@ class OscalVerticle : CoroutineVerticle() {
             }
         }
     }
-    private fun mapMimeTypeToFormat(mimeType: String?): String {
-        return when (mimeType) {
-            "application/json" -> "JSON"
-            "text/json" -> "JSON"
-            "text/xml" -> "XML"
-            "application/xml" -> "XML"
-            "application/x-yaml" -> "YAML"
-            "text/yaml" -> "YAML"
-            else -> "JSON" // Default to JSON if no valid MIME type is provided
+        private fun mapMimeTypeToFormat(mimeType: String?, formatParam: String?): String {
+            // Check if a valid format parameter is provided
+            if (!formatParam.isNullOrBlank()) {
+                return when (formatParam.lowercase()) {
+                    "json" -> "JSON"
+                    "xml" -> "XML"
+                    "yaml" -> "YAML"
+                    else -> "JSON" // Default to JSON if an invalid format is provided
+                }
+            }
+
+            // If no valid format parameter, check the MIME type
+            mimeType?.lowercase()?.let {
+                return when {
+                    it.contains("json") -> "JSON"
+                    it.contains("xml") -> "XML"
+                    it.contains("yaml") -> "YAML"
+                    else -> "JSON" // Default to JSON if no valid MIME type is provided
+                }
+            }
+
+            // Default to JSON if neither a valid formatParam nor MIME type is provided
+            return "JSON"
+        }
+        private fun mapFormatToMimeType(format: String?): String {
+        return when (format) {
+            "JSON"->"application/json"
+            "XML"->"text/xml"
+            "YAML" -> "text/yaml"
+            else -> "application/json" // Default to JSON if no valid MIME type is provided
         }
     }
     private fun handleConvertRequest(ctx: RoutingContext) {
@@ -245,11 +268,14 @@ class OscalVerticle : CoroutineVerticle() {
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
                     val acceptHeader = ctx.request().getHeader("Accept")
-                    val format = mapMimeTypeToFormat(acceptHeader)
+                    var formatParam = ctx.queryParam("format").firstOrNull()
+                    val format = mapMimeTypeToFormat(acceptHeader,formatParam)
+
                     val result = async {
                         executeCommand(parseCommandToArgs("convert $content --to=$format"))
                     }.await() // Wait for the result of the async execution
                     logger.info(result.second)
+                    ctx.response().putHeader("Content-Type", mapFormatToMimeType(format))
                     sendSuccessResponse(ctx, result.first, result.second)
                 } else {
                     sendErrorResponse(ctx, 400, "content parameter is missing")
@@ -337,16 +363,14 @@ class OscalVerticle : CoroutineVerticle() {
         File(sarifFilePath).delete()
         ctx.response()
             .setStatusCode(200) // HTTP 200 OK
-            .putHeader("Content-Type", "application/json")
             .putHeader("Exit-Status", exitStatus.exitCode.toString())
             .end(fileContent)
     }
 
-    private fun sendErrorResponse(ctx: RoutingContext, statusCode: Int, message: String) {
+    private fun sendErrorResponse(ctx: RoutingContext, exitCode: Int, message: String) {
         ctx.response()
-            .setStatusCode(statusCode)
-            .putHeader("Exit-Status", statusCode.toString())
-            .putHeader("content-type", "application/json")
+            .setStatusCode(exitCode)
+            .putHeader("Exit-Status", "PROCESSING_ERROR")
             .end(JsonObject().put("error", message).encode())
     }
     companion object {

@@ -95,6 +95,14 @@ paths:
           description: Absolute Path of the local OSCAL document to resolve
           example:
             - /Users/esper/fedramp-automation/dist/content/rev5/baselines/json/FedRAMP_rev5_HIGH-baseline_profile.json
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
       responses:
         '200':
           $ref: '#/components/responses/OscalResponse'
@@ -115,6 +123,14 @@ paths:
             type: string
             format: uri
           description: URI of the remote OSCAL document to convert
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
       responses:
         '200':
           $ref: '#/components/responses/OscalResponse'
