@@ -51,7 +51,7 @@ class TestOscalVerticle {
         val async = testContext.async()
 
         webClient.get("/validate")
-            .addQueryParam("content", "https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            .addQueryParam("document", "https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
             .send { ar ->
                 if (ar.succeeded()) {
                     val response = ar.result()
@@ -123,7 +123,7 @@ class TestOscalVerticle {
             val fileUrl = "file://" + URLEncoder.encode(tempFilePath.toString(), "UTF-8")
 
             webClient.get("/validate")
-                .addQueryParam("content", fileUrl)
+                .addQueryParam("document", fileUrl)
                 .send { ar ->
                     if (ar.succeeded()) {
                         val response = ar.result()
@@ -138,17 +138,118 @@ class TestOscalVerticle {
                         testContext.fail(ar.cause())
                     }
 
-                    // Clean up the temporary file
-                    try {
-                        Files.deleteIfExists(tempFile)
-                        logger.info("Deleted temporary file: $tempFile")
-                    } catch (e: Exception) {
-                        logger.warn("Failed to delete temporary file: $tempFile", e)
-                    }
                 }
         } catch (e: Exception) {
             logger.error("Unexpected error in test", e)
             testContext.fail(e)
         }
+    }
+
+    @Test
+    fun test_oscal_command_resolve(testContext: TestContext) {
+        val async = testContext.async()
+
+        val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/master/src/content/rev5/baselines/xml/FedRAMP_rev5_LI-SaaS-baseline_profile.xml")
+        val catalogUrl = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/master/src/content/rev5/baselines/xml/NIST_SP-800-53_rev5_catalog.xml")
+
+        val tempFile = downloadToTempFile(url, "resolve", ".xml")
+        val catalogFile = downloadCatalog(catalogUrl, tempFile.parent)
+
+        try {
+            val fileUri = tempFile.toUri().toString()
+
+            webClient.get("/resolve")
+                .addQueryParam("document", fileUri)
+                .putHeader("Accept", "application/json")
+                .send { ar ->
+                    if (ar.succeeded()) {
+                        val response = ar.result()
+                        testContext.assertEquals(200, response.statusCode())
+                        val body = response.bodyAsJsonObject()
+                        testContext.assertEquals("OK", response.getHeader("Exit-Status"))
+                        testContext.assertNotNull(body)
+                        async.complete()
+                    } else {
+                        logger.error("Resolve request failed", ar.cause())
+                        testContext.fail(ar.cause())
+                    }
+                }
+        } finally {
+            // Files.deleteIfExists(tempFile)
+            // Files.deleteIfExists(catalogFile)
+        }
+    }
+
+    @Test
+    fun test_oscal_command_convert(testContext: TestContext) {
+        val async = testContext.async()
+
+        val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/main/examples/catalog/xml/basic-catalog.xml")
+        val tempFile = downloadToTempFile(url, "convert", ".xml")
+
+        try {
+            val fileUri = tempFile.toUri().toString()
+
+            webClient.get("/convert")
+                .addQueryParam("document", fileUri)
+                .putHeader("Accept", "application/json")
+                .send { ar ->
+                    if (ar.succeeded()) {
+                        val response = ar.result()
+                        testContext.assertEquals(200, response.statusCode())
+                        val body = response.bodyAsJsonObject()
+                        testContext.assertEquals("OK", response.getHeader("Exit-Status"))
+                        testContext.assertNotNull(body)
+                        async.complete()
+                    } else {
+                        logger.error("Convert request failed", ar.cause())
+                        testContext.fail(ar.cause())
+                    }
+                }
+        } finally {
+            // Files.deleteIfExists(tempFile)
+        }
+    }
+
+    private fun downloadToTempFile(url: URL, prefix: String, suffix: String): Path {
+        val homeDir = System.getProperty("user.home")
+        val oscalDir = Paths.get(homeDir, ".oscal")
+        val tempFile = Files.createTempFile(oscalDir, prefix, suffix)
+
+        runBlocking {
+            try {
+                url.openStream().use { input ->
+                    Files.newOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                logger.info("Successfully downloaded content to $tempFile")
+            } catch (e: Exception) {
+                logger.error("Failed to download or write content", e)
+                throw e
+            }
+        }
+
+        return tempFile
+    }
+    private fun downloadCatalog(catalogUrl: URL, targetDir: Path): Path {
+        val catalogFileName = Paths.get(catalogUrl.path).fileName
+        val catalogFile = targetDir.resolve(catalogFileName)
+
+        runBlocking {
+            try {
+                catalogUrl.openStream().use { input ->
+                    Files.newOutputStream(catalogFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                logger.info("Successfully downloaded catalog to $catalogFile")
+            } catch (e: Exception) {
+                logger.error("Failed to download or write catalog", e)
+                throw e
+            }
+        }
+
+        return catalogFile
     }
 }

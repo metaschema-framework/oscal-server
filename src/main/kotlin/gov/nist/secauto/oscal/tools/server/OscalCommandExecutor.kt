@@ -47,8 +47,8 @@ open class OscalCommandExecutor(
     }
 
     override fun execute(): ExitStatus {
-        logger.debug("Executing command: $command")
-        logger.debug("With args: $args")
+        logger.info("Executing command: $command")
+        logger.info("With args: $args")
 
         val callingContext = createCallingContext(command, args)
         return callingContext.processCommand()

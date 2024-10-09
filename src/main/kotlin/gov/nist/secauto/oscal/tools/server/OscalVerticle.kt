@@ -39,10 +39,12 @@ import java.nio.file.Files
 import java.nio.charset.StandardCharsets
 import io.vertx.kotlin.coroutines.awaitBlocking
 import kotlin.io.path.appendText
+import java.util.concurrent.atomic.AtomicInteger
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
     private lateinit var oscalDir: Path
+    private val activeWorkers = AtomicInteger(0)
 
     override suspend fun start() {
         VertxOptions().setEventLoopPoolSize(8)
@@ -73,9 +75,22 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         routerBuilder.operation("resolve").handler { ctx -> handleResolveRequest(ctx) }
         routerBuilder.operation("convert").handler { ctx -> handleConvertRequest(ctx) }
+        routerBuilder.operation("healthCheck").handler { ctx -> handleHealthCheck(ctx) }
+
         val router = routerBuilder.createRouter()
         router.route("/*").handler(StaticHandler.create("webroot"))
         return router
+    }
+
+    private fun handleHealthCheck(ctx: RoutingContext) {
+        val response = JsonObject()
+            .put("status", "healthy")
+            .put("activeWorkers", activeWorkers.get())
+        
+        ctx.response()
+            .setStatusCode(200)
+            .putHeader("Content-Type", "application/json")
+            .end(response.encode())
     }
     private fun processUrl(url: String): String {
         return if (url.startsWith("file://")) {
@@ -161,18 +176,23 @@ class OscalVerticle : CoroutineVerticle() {
         launch {
             try {
                 logger.info("Handling Validate request")
-                val encodedContent = ctx.queryParam("content").firstOrNull()
+                val encodedContent = ctx.queryParam("document").firstOrNull()
+                val constraint = ctx.queryParam("constraint")
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
-                    // Use async for parallelism
+                    val args = mutableListOf("validate", content, "--show-stack-trace")
+                    constraint.forEach { constraint_document ->
+                        args.add("-c")
+                        args.add(constraint_document)
+                    }
                     val result = async {
-                        try{
-                        executeCommand(listOf("validate",content,"--show-stack-trace"))
-                        }catch (e: Exception) {
+                        try {
+                            executeCommand(args)
+                        } catch (e: Exception) {
                             logger.error("Error handling request", e)
-                            executeCommand(listOf("validate",content,"--show-stack-trace"))
+                            executeCommand(args)
                         }
-                    }.await() // Wait for the result of the async execution
+                    }.await()
                     logger.info(result.second)
                     sendSuccessResponse(ctx, result.first, result.second)
                 } else {
@@ -187,7 +207,7 @@ class OscalVerticle : CoroutineVerticle() {
     private fun handleResolveRequest(ctx: RoutingContext) {
         launch {
             try {
-            val encodedContent = ctx.queryParam("content").firstOrNull()
+            val encodedContent = ctx.queryParam("document").firstOrNull()
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
                     val acceptHeader = ctx.request().getHeader("Accept")
@@ -210,15 +230,18 @@ class OscalVerticle : CoroutineVerticle() {
     private fun mapMimeTypeToFormat(mimeType: String?): String {
         return when (mimeType) {
             "application/json" -> "JSON"
+            "text/json" -> "JSON"
+            "text/xml" -> "XML"
             "application/xml" -> "XML"
             "application/x-yaml" -> "YAML"
+            "text/yaml" -> "YAML"
             else -> "JSON" // Default to JSON if no valid MIME type is provided
         }
     }
     private fun handleConvertRequest(ctx: RoutingContext) {
         launch {
             try {
-            val encodedContent = ctx.queryParam("content").firstOrNull()
+            val encodedContent = ctx.queryParam("document").firstOrNull()
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
                     val acceptHeader = ctx.request().getHeader("Accept")
@@ -242,8 +265,10 @@ class OscalVerticle : CoroutineVerticle() {
         return command.split("\\s+".toRegex()).filter { it.isNotBlank() }
     }
     private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
+        activeWorkers.incrementAndGet()
         return withContext(vertx.dispatcher()) {
             awaitBlocking {
+
                 val command = args[0]
                                 
                 // Create a mutable list from args
@@ -253,6 +278,7 @@ class OscalVerticle : CoroutineVerticle() {
                 val guid = UUID.randomUUID().toString()
                 val sarifFileName = "${guid}.sarif"
                 val sarifFilePath = oscalDir.resolve(sarifFileName).toString()
+                                
                 logger.info("SARIF file path: $sarifFilePath")
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
@@ -273,7 +299,7 @@ class OscalVerticle : CoroutineVerticle() {
                     val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
                     File(sarifFilePath).writeText(basicSarif)
                 }
-        
+                activeWorkers.decrementAndGet()
                 Pair(exitStatus, sarifFilePath)
             }
         }
