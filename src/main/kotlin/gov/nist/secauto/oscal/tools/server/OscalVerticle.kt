@@ -92,33 +92,35 @@ class OscalVerticle : CoroutineVerticle() {
             .putHeader("Content-Type", "application/json")
             .end(response.encode())
     }
-    private fun processUrl(url: String): String {
-        return if (url.startsWith("file://")) {
-            try {
-                val uri = URI(url)
-                val path = when {
-                    uri.authority != null -> {
-                        // Remove the authority component
-                        Paths.get(uri.authority + uri.path)
-                    }
-                    uri.path.startsWith("/") -> {
-                        // Absolute path
+
+    fun processUrl(url: String): String {
+        if (!url.startsWith("file://")) {
+            return url
+        }
+
+        try {
+            val uri = URI(url)
+            val path = when {
+                uri.authority != null -> {
+                    // Handle Windows UNC paths (e.g., file://server/share/path)
+                    // and local paths with authority (e.g., file://localhost/c:/path)
+                    if (uri.authority == "localhost") {
                         Paths.get(uri.path)
-                    }
-                    else -> {
-                        // Relative path
-                        Paths.get(uri.path).toAbsolutePath()
+                    } else {
+                        Paths.get("//${uri.authority}${uri.path}")
                     }
                 }
-                path.toString()
-            } catch (e: Exception) {
-                logger.error("Error processing file URL: $url", e)
-                url // Return original URL if processing fails
+                else -> Paths.get(uri.path)
             }
-        } else {
-            url
+
+            // Normalize the path to resolve any ".." or "." components
+            return path.normalize().toString()
+        } catch (e: Exception) {
+            logger.error("Error processing file URL: $url", e)
+            return url
         }
     }
+    
     private fun handleValidateFileUpload(ctx: RoutingContext) {
         logger.info("Handling file upload request!")
         launch {
