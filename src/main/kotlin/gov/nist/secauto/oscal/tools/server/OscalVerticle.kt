@@ -271,7 +271,7 @@ class OscalVerticle : CoroutineVerticle() {
             return when (format) {
                 "disable-schema"->"--disable-schema-validation"
                 "disable-constraint"->"--disable-constraint-validation"
-                else -> "application/json" // Default to JSON if no valid MIME type is provided
+                else -> "--quiet" // Default to JSON if no valid MIME type is provided
             }
         }
         private fun handleConvertRequest(ctx: RoutingContext) {

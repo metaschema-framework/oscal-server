@@ -14,6 +14,7 @@
 			<outputDirectory>/lib</outputDirectory>
 			<outputFileNameMapping>${artifact.groupId}.${artifact.artifactId}-${artifact.version}.${artifact.extension}</outputFileNameMapping>
 			<useProjectArtifact>true</useProjectArtifact>
+			<useTransitiveDependencies>false</useTransitiveDependencies>
 			<excludes>
 				<exclude>org.jetbrains:annotations</exclude>
 				<exclude>org.eclipse.jdt:org.eclipse.jdt.annotation</exclude>

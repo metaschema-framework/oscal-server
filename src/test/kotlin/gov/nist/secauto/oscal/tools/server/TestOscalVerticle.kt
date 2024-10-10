@@ -252,4 +252,64 @@ class TestOscalVerticle {
 
         return catalogFile
     }
+    @Test
+    fun test_validate_with_constraint_increases_rule_count(testContext: TestContext) {
+        val async = testContext.async()
+
+        try {
+            // Download and save test files
+            val sspUrl = URL("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/content/ssp-attachment-type-INVALID.xml")
+            val constraintUrl = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml")
+            
+            val sspFile = downloadToTempFile(sspUrl, "ssp", ".xml")
+            val constraintFile = downloadToTempFile(constraintUrl, "constraints", ".xml")
+
+            val sspFileUri = sspFile.toUri().toString()
+            val constraintFileUri = constraintFile.toUri().toString()
+
+            // Validate without constraint
+            webClient.get("/validate")
+                .addQueryParam("flag", "disable-schema")
+                .addQueryParam("document", sspFileUri)
+                .send { arWithoutConstraint ->
+                    if (arWithoutConstraint.succeeded()) {
+                        val responseWithoutConstraint = arWithoutConstraint.result()
+                        testContext.assertEquals(200, responseWithoutConstraint.statusCode())
+                        val sarifWithoutConstraint = responseWithoutConstraint.bodyAsString()
+                        val ruleCountWithoutConstraint = (sarifWithoutConstraint).length
+
+                        // Validate with constraint
+                        webClient.get("/validate")
+                            .addQueryParam("document", sspFileUri)
+                            .addQueryParam("flag", "disable-schema")
+                            .addQueryParam("constraint", constraintFileUri)
+                            .send { arWithConstraint ->
+                                if (arWithConstraint.succeeded()) {
+                                    val responseWithConstraint = arWithConstraint.result()
+                                    testContext.assertEquals(200, responseWithConstraint.statusCode())
+                                    val sarifWithConstraint = responseWithConstraint.bodyAsString()
+                                    val ruleCountWithConstraint = (sarifWithConstraint).length
+
+                                    // Verify that the number of rules has increased
+                                    testContext.assertTrue(ruleCountWithConstraint > ruleCountWithoutConstraint,
+                                        "Rule count with constraint ($ruleCountWithConstraint) should be greater than without constraint ($ruleCountWithoutConstraint)")
+                                    testContext.assertTrue(sarifWithConstraint.contains("resource-has-title"))
+                                    testContext.assertFalse(sarifWithoutConstraint.contains("resource-has-title"))
+                                    async.complete()
+                                } else {
+                                    logger.error("Validation with constraint request failed", arWithConstraint.cause())
+                                    testContext.fail(arWithConstraint.cause())
+                                }
+                            }
+                    } else {
+                        logger.error("Validation without constraint request failed", arWithoutConstraint.cause())
+                        testContext.fail(arWithoutConstraint.cause())
+                    }
+                }
+        } catch (e: Exception) {
+            logger.error("Unexpected error in test", e)
+            testContext.fail(e)
+        }
+    }
+
 }
