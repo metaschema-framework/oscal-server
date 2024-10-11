@@ -93,30 +93,40 @@ class OscalVerticle : CoroutineVerticle() {
             .end(response.encode())
     }
 
-    fun processUrl(url: String): String {
+    private fun processUrl(url: String): String {
+        logger.info("processUrl input: $url")
+        
         if (!url.startsWith("file://")) {
+            logger.info("processUrl output (unchanged): $url")
             return url
         }
 
         try {
-            val uri = URI(url)
-            val path = when {
-                uri.authority != null -> {
-                    // Handle Windows UNC paths (e.g., file://server/share/path)
-                    // and local paths with authority (e.g., file://localhost/c:/path)
-                    if (uri.authority == "localhost") {
-                        Paths.get(uri.path)
+            // Remove the "file://" prefix and decode the URL
+            val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
+            
+            val result = when {
+                System.getProperty("os.name").toLowerCase().contains("win") -> {
+                    // Windows-specific handling
+                    if (decodedPath.startsWith("/")) {
+                        // Absolute path with drive letter
+                        decodedPath.substring(1).replace('/', '\\')
                     } else {
-                        Paths.get("//${uri.authority}${uri.path}")
+                        // UNC path or relative path
+                        decodedPath.replace('/', '\\')
                     }
                 }
-                else -> Paths.get(uri.path)
+                else -> {
+                    // Unix-like systems
+                    decodedPath
+                }
             }
-
-            // Normalize the path to resolve any ".." or "." components
-            return path.normalize().toString()
+            
+            logger.info("processUrl output: $result")
+            return result
         } catch (e: Exception) {
             logger.error("Error processing file URL: $url", e)
+            logger.info("processUrl output (error case): $url")
             return url
         }
     }
