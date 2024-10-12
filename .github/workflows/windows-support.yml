@@ -7,8 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout repository
@@ -24,5 +26,46 @@ jobs:
     - name: Build with Maven
       run: mvn clean package
 
-    - name: Run oscal-server.bat
-      run: .\oscal-server.bat
+    - name: Get version and set release info
+      id: get_version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/v* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_OUTPUT
+          echo "RELEASE_NAME=Release $VERSION" >> $GITHUB_OUTPUT
+          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+        else
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION-$COMMIT_HASH-$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "RELEASE_NAME=Release $VERSION ($(date +'%Y-%m-%d %H:%M:%S'))" >> $GITHUB_OUTPUT
+          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run on Windows and perform healthcheck
+      run: |
+          start /B cmd /c ".\target\server-${{ steps.get_version.outputs.VERSION }}-oscal-server\bin\oscal-server.bat"
+          timeout /t 10 /nobreak
+          powershell -Command "
+            $attempt = 0
+            $maxAttempts = 5
+            $delay = 2
+            do {
+              $attempt++
+              try {
+                $response = Invoke-WebRequest -Uri http://localhost:8888/health -Method GET -UseBasicParsing
+                if ($response.StatusCode -eq 200) {
+                  Write-Host 'Health check passed: 200 OK'
+                  exit 0
+                }
+              } catch {
+                Write-Host 'Health check failed. Retrying...'
+              }
+              Start-Sleep -Seconds $delay
+            } while ($attempt -lt $maxAttempts)
+            Write-Error 'Health check failed after maximum attempts'
+            exit 1
+          "
