@@ -27,13 +27,16 @@ jobs:
     - name: Get version and set release info
       id: get_version
       run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          COMMIT_HASH=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG_NAME=v$VERSION-$COMMIT_HASH-$TIMESTAMP" >> $GITHUB_OUTPUT
-          echo "RELEASE_NAME=Release $VERSION ($(date +'%Y-%m-%d %H:%M:%S'))" >> $GITHUB_OUTPUT
-          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+            @echo off
+            for /f "tokens=*" %%i in ('mvn help:evaluate -Dexpression^=project.version -q -DforceStdout') do set VERSION=%%i
+            for /f "tokens=*" %%i in ('git rev-parse --short HEAD') do set COMMIT_HASH=%%i
+            for /f "tokens=*" %%i in ('wmic os get localdatetime ^| find "."') do set DATETIME=%%i
+            set TIMESTAMP=%DATETIME:~0,14%
+
+            echo VERSION=%VERSION% >> %GITHUB_OUTPUT%
+            echo TAG_NAME=v%VERSION%-%COMMIT_HASH%-%TIMESTAMP% >> %GITHUB_OUTPUT%
+            echo RELEASE_NAME=Release %VERSION% (%DATE% %TIME%) >> %GITHUB_OUTPUT%
+            echo IS_PRERELEASE=true >> %GITHUB_OUTPUT%
 
     - name: Run on Windows and perform healthcheck
       run: |
