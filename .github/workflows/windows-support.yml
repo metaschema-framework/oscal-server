@@ -27,13 +27,6 @@ jobs:
     - name: Get version and set release info
       id: get_version
       run: |
-        if [[ $GITHUB_REF == refs/tags/v* ]]; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG_NAME=v$VERSION" >> $GITHUB_OUTPUT
-          echo "RELEASE_NAME=Release $VERSION" >> $GITHUB_OUTPUT
-          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
-        else
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +'%Y%m%d%H%M%S')
@@ -41,7 +34,6 @@ jobs:
           echo "TAG_NAME=v$VERSION-$COMMIT_HASH-$TIMESTAMP" >> $GITHUB_OUTPUT
           echo "RELEASE_NAME=Release $VERSION ($(date +'%Y-%m-%d %H:%M:%S'))" >> $GITHUB_OUTPUT
           echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
-        fi
 
     - name: Run on Windows and perform healthcheck
       run: |
