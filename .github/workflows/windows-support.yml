@@ -27,7 +27,6 @@ jobs:
     - name: Get version and set release info
       id: get_version
       run: |
-            @echo off
             for /f "tokens=*" %%i in ('mvn help:evaluate -Dexpression^=project.version -q -DforceStdout') do set VERSION=%%i
             for /f "tokens=*" %%i in ('git rev-parse --short HEAD') do set COMMIT_HASH=%%i
             for /f "tokens=*" %%i in ('wmic os get localdatetime ^| find "."') do set DATETIME=%%i
