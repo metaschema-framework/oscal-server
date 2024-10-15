@@ -134,6 +134,13 @@
         <version>2.1.0</version>
         <executions>
           <execution>
+            <id>generate-scripts</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+          <execution>
             <id>exec-oscal-server-windows</id>
             <phase>package</phase>
             <goals>
@@ -169,6 +176,7 @@
           <repositoryLayout>flat</repositoryLayout>
           <repositoryName>lib</repositoryName>
           <outputFileNameMapping>@{groupId}@.@{artifactId}@-@{version}@.@{extension}@</outputFileNameMapping>
+          <useWildcardClassPath>true</useWildcardClassPath>
           <extraJvmArguments>-Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</extraJvmArguments>
           <projectArtifactFirstInClassPath>true</projectArtifactFirstInClassPath>
           <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>

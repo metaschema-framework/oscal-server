@@ -92,33 +92,45 @@ class OscalVerticle : CoroutineVerticle() {
             .putHeader("Content-Type", "application/json")
             .end(response.encode())
     }
+
     private fun processUrl(url: String): String {
-        return if (url.startsWith("file://")) {
-            try {
-                val uri = URI(url)
-                val path = when {
-                    uri.authority != null -> {
-                        // Remove the authority component
-                        Paths.get(uri.authority + uri.path)
-                    }
-                    uri.path.startsWith("/") -> {
-                        // Absolute path
-                        Paths.get(uri.path)
-                    }
-                    else -> {
-                        // Relative path
-                        Paths.get(uri.path).toAbsolutePath()
+        logger.info("processUrl input: $url")
+        
+        if (!url.startsWith("file://")) {
+            logger.info("processUrl output (unchanged): $url")
+            return url
+        }
+
+        try {
+            // Remove the "file://" prefix and decode the URL
+            val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
+            
+            val result = when {
+                System.getProperty("os.name").toLowerCase().contains("win") -> {
+                    // Windows-specific handling
+                    if (decodedPath.startsWith("/")) {
+                        // Absolute path with drive letter
+                        decodedPath.substring(1).replace('/', '\\')
+                    } else {
+                        // UNC path or relative path
+                        decodedPath.replace('/', '\\')
                     }
                 }
-                path.toString()
-            } catch (e: Exception) {
-                logger.error("Error processing file URL: $url", e)
-                url // Return original URL if processing fails
+                else -> {
+                    // Unix-like systems
+                    decodedPath
+                }
             }
-        } else {
-            url
+            
+            logger.info("processUrl output: $result")
+            return result
+        } catch (e: Exception) {
+            logger.error("Error processing file URL: $url", e)
+            logger.info("processUrl output (error case): $url")
+            return url
         }
     }
+    
     private fun handleValidateFileUpload(ctx: RoutingContext) {
         logger.info("Handling file upload request!")
         launch {

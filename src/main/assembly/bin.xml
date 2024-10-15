@@ -20,6 +20,12 @@
 				<exclude>org.eclipse.jdt:org.eclipse.jdt.annotation</exclude>
 			</excludes>
 		</dependencySet>
+		<dependencySet>
+			<outputDirectory>lib</outputDirectory>
+			<useProjectArtifact>true</useProjectArtifact>
+			<unpack>false</unpack>
+			<scope>runtime</scope>
+		</dependencySet>
 	</dependencySets>
 	<fileSets>
 		<fileSet>
@@ -45,6 +51,7 @@
 				<include>**/*</include>
 			</includes>
 		</fileSet>
+		
 	</fileSets>
 	<containerDescriptorHandlers>
 		<containerDescriptorHandler>

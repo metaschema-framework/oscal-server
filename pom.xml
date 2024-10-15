@@ -342,11 +342,19 @@
           <outputFileNameMapping>
             @{groupId}@.@{artifactId}@-@{version}@.@{extension}@
           </outputFileNameMapping>
+          <useWildcardClassPath>true</useWildcardClassPath>
           <extraJvmArguments>-Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</extraJvmArguments>
           <projectArtifactFirstInClassPath>true</projectArtifactFirstInClassPath>
           <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>
         </configuration>
         <executions>
+          <execution>
+            <id>generate-scripts</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
           <execution>
             <id>exec-oscal-server-windows</id>
             <phase>package</phase>
