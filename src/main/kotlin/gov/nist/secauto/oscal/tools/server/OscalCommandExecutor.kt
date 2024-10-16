@@ -29,6 +29,7 @@ import java.util.Deque
 import gov.nist.secauto.oscal.tools.cli.core.commands.ConvertCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ResolveCommand
+import gov.nist.secauto.oscal.tools.server.core.commands.QueryCommand
 
 open class OscalCommandExecutor(
     protected val command: String,
@@ -39,6 +40,7 @@ open class OscalCommandExecutor(
     protected open val commands: Map<String, () -> ICommand> = mapOf(
         "validate" to ::ValidateCommand,
         "convert" to ::ConvertCommand,
+        "query" to ::QueryCommand,
         "resolve-profile" to ::ResolveCommand
     )
 

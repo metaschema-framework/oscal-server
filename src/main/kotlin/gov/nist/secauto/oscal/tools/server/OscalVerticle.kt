@@ -75,6 +75,7 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         routerBuilder.operation("resolve").handler { ctx -> handleResolveRequest(ctx) }
         routerBuilder.operation("convert").handler { ctx -> handleConvertRequest(ctx) }
+        routerBuilder.operation("query").handler { ctx -> handleQueryRequest(ctx) }
         routerBuilder.operation("healthCheck").handler { ctx -> handleHealthCheck(ctx) }
 
         val router = routerBuilder.createRouter()
@@ -83,6 +84,17 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun handleHealthCheck(ctx: RoutingContext) {
+        val response = JsonObject()
+            .put("status", "healthy")
+            .put("activeWorkers", activeWorkers.get())
+        
+        ctx.response()
+            .setStatusCode(200)
+            .putHeader("Content-Type", "application/json")
+            .end(response.encode())
+    }
+
+    private fun handleQueryRequest(ctx: RoutingContext) {
         val response = JsonObject()
             .put("status", "healthy")
             .put("activeWorkers", activeWorkers.get())
@@ -130,6 +142,7 @@ class OscalVerticle : CoroutineVerticle() {
             return url
         }
     }
+    
     
     private fun handleValidateFileUpload(ctx: RoutingContext) {
         logger.info("Handling file upload request!")
