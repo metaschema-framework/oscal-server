@@ -5,6 +5,7 @@
 
 package gov.nist.secauto.oscal.tools.server
 import io.vertx.core.Vertx
+import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import java.util.UUID
@@ -75,6 +76,7 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         routerBuilder.operation("resolve").handler { ctx -> handleResolveRequest(ctx) }
         routerBuilder.operation("convert").handler { ctx -> handleConvertRequest(ctx) }
+        routerBuilder.operation("query").handler { ctx -> handleQueryRequest(ctx) }
         routerBuilder.operation("healthCheck").handler { ctx -> handleHealthCheck(ctx) }
 
         val router = routerBuilder.createRouter()
@@ -91,6 +93,42 @@ class OscalVerticle : CoroutineVerticle() {
             .setStatusCode(200)
             .putHeader("Content-Type", "application/json")
             .end(response.encode())
+    }
+
+    private fun handleQueryRequest(ctx: RoutingContext) {
+               launch {
+            try {
+                logger.info("Handling Query request")
+                val encodedContent = ctx.queryParam("document").firstOrNull()
+                val expression = ctx.queryParam("expression").firstOrNull()
+                if (encodedContent != null&&expression!=null) {
+                    val content = processUrl(encodedContent)
+                    val args = mutableListOf("query")
+                    args.add("-i")
+                    args.add(content)
+                    args.add("-e")
+                    args.add(expression)
+                    args.add("-m")
+                    args.add("https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml")
+                    val result = async {
+                        try {
+                            executeCommand(args)
+                        } catch (e: Exception) {
+                            logger.error("Error handling request", e)
+                            executeCommand(args)
+                        }
+                    }.await()
+                    logger.info(result.second)
+                    sendSuccessResponse(ctx, result.first, result.second)
+                } else {
+                    sendErrorResponse(ctx, 400, "content parameter is missing")
+                }
+            } catch (e: Exception) {
+                logger.error("Error handling request", e)
+                sendErrorResponse(ctx, 500, "Internal server error")
+            }
+        }
+
     }
 
     private fun processUrl(url: String): String {
@@ -130,6 +168,7 @@ class OscalVerticle : CoroutineVerticle() {
             return url
         }
     }
+    
     
     private fun handleValidateFileUpload(ctx: RoutingContext) {
         logger.info("Handling file upload request!")
@@ -174,7 +213,11 @@ class OscalVerticle : CoroutineVerticle() {
     }
     private suspend fun startHttpServer(router: Router) {
         try {
-            val server = vertx.createHttpServer()
+            val options = HttpServerOptions()
+                .setHost("localhost")  // This restricts the server to localhost
+                .setPort(8888);        // You can change this port as needed
+            
+            val server = vertx.createHttpServer(options)
                 .requestHandler(router)
                 .listen(8888)
                 .coAwait()
@@ -338,6 +381,9 @@ class OscalVerticle : CoroutineVerticle() {
                     if(!mutableArgs.contains(("--sarif-include-pass"))){
                         mutableArgs.add("--sarif-include-pass")
                     }
+                    mutableArgs.add("-o")    
+                }
+                if (mutableArgs[0] == "query"){
                     mutableArgs.add("-o")    
                 }
                 mutableArgs.add(sarifFilePath)

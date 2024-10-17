@@ -149,6 +149,34 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /query:
+    get:
+      operationId: query
+      summary: Query OSCAL document
+      parameters:
+        - in: query
+          name: document
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: URI of the remote OSCAL document to convert
+          example: https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
+        - in: query
+          name: expression
+          required: false
+          schema:
+            type: string
+          description: metapath expression to query oscal document
+          example: //user
+
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   schemas:
