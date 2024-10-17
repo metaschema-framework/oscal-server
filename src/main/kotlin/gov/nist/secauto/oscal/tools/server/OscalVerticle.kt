@@ -95,14 +95,39 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun handleQueryRequest(ctx: RoutingContext) {
-        val response = JsonObject()
-            .put("status", "healthy")
-            .put("activeWorkers", activeWorkers.get())
-        
-        ctx.response()
-            .setStatusCode(200)
-            .putHeader("Content-Type", "application/json")
-            .end(response.encode())
+               launch {
+            try {
+                logger.info("Handling Query request")
+                val encodedContent = ctx.queryParam("document").firstOrNull()
+                val expression = ctx.queryParam("expression").firstOrNull()
+                if (encodedContent != null&&expression!=null) {
+                    val content = processUrl(encodedContent)
+                    val args = mutableListOf("query")
+                    args.add("-i")
+                    args.add(content)
+                    args.add("-e")
+                    args.add(expression)
+                    args.add("-m")
+                    args.add("https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml")
+                    val result = async {
+                        try {
+                            executeCommand(args)
+                        } catch (e: Exception) {
+                            logger.error("Error handling request", e)
+                            executeCommand(args)
+                        }
+                    }.await()
+                    logger.info(result.second)
+                    sendSuccessResponse(ctx, result.first, result.second)
+                } else {
+                    sendErrorResponse(ctx, 400, "content parameter is missing")
+                }
+            } catch (e: Exception) {
+                logger.error("Error handling request", e)
+                sendErrorResponse(ctx, 500, "Internal server error")
+            }
+        }
+
     }
 
     private fun processUrl(url: String): String {
@@ -351,6 +376,9 @@ class OscalVerticle : CoroutineVerticle() {
                     if(!mutableArgs.contains(("--sarif-include-pass"))){
                         mutableArgs.add("--sarif-include-pass")
                     }
+                    mutableArgs.add("-o")    
+                }
+                if (mutableArgs[0] == "query"){
                     mutableArgs.add("-o")    
                 }
                 mutableArgs.add(sarifFilePath)

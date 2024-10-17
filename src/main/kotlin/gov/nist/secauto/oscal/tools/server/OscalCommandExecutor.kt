@@ -156,6 +156,7 @@ open class OscalCommandExecutor(
                     executor.execute()
                 }
             } catch (ex: RuntimeException) {
+                logger.info(ex.toString())
                 ExitCode.RUNTIME_ERROR
                     .exitMessage("An uncaught runtime error occurred. ${ex.localizedMessage}")
                     .withThrowable(ex)
