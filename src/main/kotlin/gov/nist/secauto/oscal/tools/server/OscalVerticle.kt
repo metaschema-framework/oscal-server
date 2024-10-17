@@ -5,6 +5,7 @@
 
 package gov.nist.secauto.oscal.tools.server
 import io.vertx.core.Vertx
+import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import java.util.UUID
@@ -212,7 +213,11 @@ class OscalVerticle : CoroutineVerticle() {
     }
     private suspend fun startHttpServer(router: Router) {
         try {
-            val server = vertx.createHttpServer()
+            val options = HttpServerOptions()
+                .setHost("localhost")  // This restricts the server to localhost
+                .setPort(8888);        // You can change this port as needed
+            
+            val server = vertx.createHttpServer(options)
                 .requestHandler(router)
                 .listen(8888)
                 .coAwait()
