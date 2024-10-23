@@ -52,7 +52,6 @@ paths:
             items:
               type: string
               enum: [disable-schema, disable-constraint]
-
           description: URIs of metaschema extension modules to load
           example: disable-schema
       responses:
@@ -121,6 +120,32 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: resolveUpload
+      summary: Resolve uploaded OSCAL document
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /convert:
     get:
@@ -149,6 +174,32 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '500':
           $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: convertUpload
+      summary: Convert uploaded OSCAL document
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /query:
     get:
       operationId: query
@@ -169,7 +220,31 @@ paths:
             type: string
           description: metapath expression to query oscal document
           example: //user
-
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: queryUpload
+      summary: Query uploaded OSCAL document
+      parameters:
+        - in: query
+          name: expression
+          required: true
+          schema:
+            type: string
+          description: metapath expression to query oscal document
+          example: //user
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
       responses:
         '200':
           $ref: '#/components/responses/OscalResponse'

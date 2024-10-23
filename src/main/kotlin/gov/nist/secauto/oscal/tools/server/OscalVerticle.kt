@@ -75,8 +75,11 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("validateUpload").handler { ctx -> handleValidateFileUpload(ctx) }
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         routerBuilder.operation("resolve").handler { ctx -> handleResolveRequest(ctx) }
+        routerBuilder.operation("resolveUpload").handler { ctx -> handleResolveFileUpload(ctx) }
         routerBuilder.operation("convert").handler { ctx -> handleConvertRequest(ctx) }
+        routerBuilder.operation("convertUpload").handler { ctx -> handleConvertFileUpload(ctx) }
         routerBuilder.operation("query").handler { ctx -> handleQueryRequest(ctx) }
+        routerBuilder.operation("queryUpload").handler { ctx -> handleQueryFileUpload(ctx) }
         routerBuilder.operation("healthCheck").handler { ctx -> handleHealthCheck(ctx) }
 
         val router = routerBuilder.createRouter()
@@ -96,20 +99,18 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun handleQueryRequest(ctx: RoutingContext) {
-               launch {
+        launch {
             try {
                 logger.info("Handling Query request")
                 val encodedContent = ctx.queryParam("document").firstOrNull()
                 val expression = ctx.queryParam("expression").firstOrNull()
-                if (encodedContent != null&&expression!=null) {
+                if (encodedContent != null && expression != null) {
                     val content = processUrl(encodedContent)
                     val args = mutableListOf("query")
                     args.add("-i")
                     args.add(content)
                     args.add("-e")
                     args.add(expression)
-                    args.add("-m")
-                    args.add("https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml")
                     val result = async {
                         try {
                             executeCommand(args)
@@ -128,8 +129,9 @@ class OscalVerticle : CoroutineVerticle() {
                 sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-
     }
+
+    
 
     private fun processUrl(url: String): String {
         logger.info("processUrl input: $url")
@@ -188,7 +190,7 @@ class OscalVerticle : CoroutineVerticle() {
                     // Write the body content to the temporary file
                     tempFile.appendText(body)
                     logger.info("Wrote body content to temporary file")
-    
+                   logger.info(tempFilePath+" :tempfilepath");
                     // Use async for parallelism
                     val result = async {
                         executeCommand(listOf("validate", tempFilePath.toString(),"--show-stack-trace"))
@@ -288,48 +290,49 @@ class OscalVerticle : CoroutineVerticle() {
             }
         }
     }
-        private fun mapMimeTypeToFormat(mimeType: String?, formatParam: String?): String {
-            // Check if a valid format parameter is provided
-            if (!formatParam.isNullOrBlank()) {
-                return when (formatParam.lowercase()) {
-                    "json" -> "JSON"
-                    "xml" -> "XML"
-                    "yaml" -> "YAML"
-                    else -> "JSON" // Default to JSON if an invalid format is provided
-                }
-            }
 
-            // If no valid format parameter, check the MIME type
-            mimeType?.lowercase()?.let {
-                return when {
-                    it.contains("json") -> "JSON"
-                    it.contains("xml") -> "XML"
-                    it.contains("yaml") -> "YAML"
-                    else -> "JSON" // Default to JSON if no valid MIME type is provided
-                }
-            }
-
-            // Default to JSON if neither a valid formatParam nor MIME type is provided
-            return "JSON"
-        }
-
-
-        private fun mapFormatToMimeType(format: String?): String {
-            return when (format) {
-                "JSON"->"application/json"
-                "XML"->"text/xml"
-                "YAML" -> "text/yaml"
-                else -> "application/json" // Default to JSON if no valid MIME type is provided
+    private fun mapMimeTypeToFormat(mimeType: String?, formatParam: String?): String {
+        // Check if a valid format parameter is provided
+        if (!formatParam.isNullOrBlank()) {
+            return when (formatParam.lowercase()) {
+                "json" -> "JSON"
+                "xml" -> "XML"
+                "yaml" -> "YAML"
+                else -> "ERROR" 
             }
         }
-         private fun flagToParam(format: String): String {
-            return when (format) {
-                "disable-schema"->"--disable-schema-validation"
-                "disable-constraint"->"--disable-constraint-validation"
-                else -> "--quiet" // Default to JSON if no valid MIME type is provided
+
+        // If no valid format parameter, check the MIME type
+        mimeType?.lowercase()?.let {
+            return when {
+                it.contains("json") -> "JSON"
+                it.contains("xml") -> "XML"
+                it.contains("yaml") -> "YAML"
+                else -> "ERROR" // Default to JSON if no valid MIME type is provided
             }
         }
-        private fun handleConvertRequest(ctx: RoutingContext) {
+
+        // Default to JSON if neither a valid formatParam nor MIME type is provided
+        return "ERROR"
+    }
+
+
+    private fun mapFormatToMimeType(format: String?): String {
+        return when (format) {
+            "JSON"->"application/json"
+            "XML"->"text/xml"
+            "YAML" -> "text/yaml"
+            else -> "ERROR" // Default to JSON if no valid MIME type is provided
+        }
+    }
+     private fun flagToParam(format: String): String {
+        return when (format) {
+            "disable-schema"->"--disable-schema-validation"
+            "disable-constraint"->"--disable-constraint-validation"
+            else -> "--quiet" 
+        }
+    }
+    private fun handleConvertRequest(ctx: RoutingContext) {
         launch {
             try {
             val encodedContent = ctx.queryParam("document").firstOrNull()
@@ -354,6 +357,8 @@ class OscalVerticle : CoroutineVerticle() {
             }
         }
     }
+
+    
 
     private fun parseCommandToArgs(command: String): List<String> {
         return command.split("\\s+".toRegex()).filter { it.isNotBlank() }
@@ -451,4 +456,125 @@ class OscalVerticle : CoroutineVerticle() {
             vertx.deployVerticle(OscalVerticle())
         }
     }
+    private fun handleQueryFileUpload(ctx: RoutingContext) {
+    launch {
+        try {
+            logger.info("Handling Query file upload request")
+            val body = ctx.body().asString()
+            val expression = ctx.queryParam("expression").firstOrNull()
+
+            if (body.isNotEmpty() && expression != null) {
+                // Create a temporary file
+                val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
+                val tempFilePath = tempFile.toAbsolutePath()
+                logger.info("Created temporary file: $tempFilePath")
+
+                // Write the body content to the temporary file
+                tempFile.appendText(body)
+                logger.info("Wrote body content to temporary file")
+
+                val args = mutableListOf("query")
+                args.add("-i")
+                args.add(processUrl(tempFilePath.toString()))
+                args.add("-e")
+                args.add(expression)
+
+                val result = async {
+                    try {
+                        executeCommand(args)
+                    } catch (e: Exception) {
+                        logger.error("Error handling request", e)
+                        executeCommand(args)
+                    }
+                }.await()
+                
+                logger.info(result.second)
+                sendSuccessResponse(ctx, result.first, result.second)
+                
+                // Clean up temporary file
+            } else {
+                sendErrorResponse(ctx, 400, "Missing request body or expression parameter")
+            }
+        } catch (e: Exception) {
+            logger.error("Error handling file upload request", e)
+            sendErrorResponse(ctx, 500, "Internal server error")
+        }
+    }
+}
+
+private fun handleResolveFileUpload(ctx: RoutingContext) {
+    launch {
+        try {
+            logger.info("Handling Resolve file upload request")
+            val body = ctx.body().asString()
+            val acceptHeader = ctx.request().getHeader("Accept")
+            val formatParam = ctx.queryParam("format").firstOrNull()
+            val format = mapMimeTypeToFormat(acceptHeader, formatParam)
+
+            if (body.isNotEmpty()) {
+                // Create a temporary file
+                val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
+                val tempFilePath = tempFile.toAbsolutePath()
+                logger.info("Created temporary file: $tempFilePath")
+
+                // Write the body content to the temporary file
+                tempFile.appendText(body)
+                logger.info("Wrote body content to temporary file")
+
+                val result = async {
+                    executeCommand(parseCommandToArgs("resolve-profile ${processUrl(tempFilePath.toString())} --to=$format"))
+                }.await()
+                
+                logger.info(result.second)
+                ctx.response().putHeader("Content-Type", mapFormatToMimeType(format))
+                sendSuccessResponse(ctx, result.first, result.second)
+                
+                // Clean up temporary file
+            } else {
+                sendErrorResponse(ctx, 400, "No content in request body")
+            }
+        } catch (e: Exception) {
+            logger.error("Error handling file upload request", e)
+            sendErrorResponse(ctx, 500, "Internal server error")
+        }
+    }
+}
+
+private fun handleConvertFileUpload(ctx: RoutingContext) {
+    launch {
+        try {
+            logger.info("Handling Convert file upload request")
+            val body = ctx.body().asString()
+            val acceptHeader = ctx.request().getHeader("Accept")
+            val formatParam = ctx.queryParam("format").firstOrNull()
+            val format = mapMimeTypeToFormat(acceptHeader, formatParam)
+
+            if (body.isNotEmpty()) {
+                // Create a temporary file
+                val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
+                val tempFilePath = tempFile.toAbsolutePath()
+                logger.info("Created temporary file: $tempFilePath")
+
+                // Write the body content to the temporary file
+                tempFile.appendText(body)
+                logger.info("Wrote body content to temporary file")
+
+                val result = async {
+                    executeCommand(parseCommandToArgs("convert ${processUrl(tempFilePath.toString())} --to=$format"))
+                }.await()
+                
+                logger.info(result.second)
+                ctx.response().putHeader("Content-Type", mapFormatToMimeType(format))
+                sendSuccessResponse(ctx, result.first, result.second)
+                
+                // Clean up temporary file
+            } else {
+                sendErrorResponse(ctx, 400, "No content in request body")
+            }
+        } catch (e: Exception) {
+            logger.error("Error handling file upload request", e)
+            sendErrorResponse(ctx, 500, "Internal server error")
+        }
+    }
+}
 }
