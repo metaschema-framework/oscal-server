@@ -111,8 +111,6 @@ class OscalVerticle : CoroutineVerticle() {
                     args.add(content)
                     args.add("-e")
                     args.add(expression)
-                    args.add("-m")
-                    args.add("https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml")
                     val result = async {
                         try {
                             executeCommand(args)
@@ -300,7 +298,7 @@ class OscalVerticle : CoroutineVerticle() {
                 "json" -> "JSON"
                 "xml" -> "XML"
                 "yaml" -> "YAML"
-                else -> "JSON" // Default to JSON if an invalid format is provided
+                else -> "ERROR" 
             }
         }
 
@@ -310,12 +308,12 @@ class OscalVerticle : CoroutineVerticle() {
                 it.contains("json") -> "JSON"
                 it.contains("xml") -> "XML"
                 it.contains("yaml") -> "YAML"
-                else -> "JSON" // Default to JSON if no valid MIME type is provided
+                else -> "ERROR" // Default to JSON if no valid MIME type is provided
             }
         }
 
         // Default to JSON if neither a valid formatParam nor MIME type is provided
-        return "JSON"
+        return "ERROR"
     }
 
 
@@ -324,14 +322,14 @@ class OscalVerticle : CoroutineVerticle() {
             "JSON"->"application/json"
             "XML"->"text/xml"
             "YAML" -> "text/yaml"
-            else -> "application/json" // Default to JSON if no valid MIME type is provided
+            else -> "ERROR" // Default to JSON if no valid MIME type is provided
         }
     }
      private fun flagToParam(format: String): String {
         return when (format) {
             "disable-schema"->"--disable-schema-validation"
             "disable-constraint"->"--disable-constraint-validation"
-            else -> "--quiet" // Default to JSON if no valid MIME type is provided
+            else -> "--quiet" 
         }
     }
     private fun handleConvertRequest(ctx: RoutingContext) {
@@ -480,8 +478,6 @@ class OscalVerticle : CoroutineVerticle() {
                 args.add(processUrl(tempFilePath.toString()))
                 args.add("-e")
                 args.add(expression)
-                args.add("-m")
-                args.add("https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml")
 
                 val result = async {
                     try {
