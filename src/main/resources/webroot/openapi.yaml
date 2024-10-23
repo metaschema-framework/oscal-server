@@ -77,6 +77,16 @@ paths:
           example: 
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
+        - in: query
+          name: flags
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [disable-schema, disable-constraint]
+          description: URIs of metaschema extension modules to load
+          example: disable-schema
       requestBody:
         required: true
         content:

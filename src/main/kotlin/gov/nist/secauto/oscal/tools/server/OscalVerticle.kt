@@ -179,21 +179,25 @@ class OscalVerticle : CoroutineVerticle() {
                 logger.info("Handling file upload request in the background")
                 val body = ctx.body().asString()
                 logger.info("Received body: $body")
-    
+                val flags = ctx.queryParam("flags")
+
                 if (body.isNotEmpty()) {
                     // Create a temporary file
                     val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
 
                     val tempFilePath = tempFile.toAbsolutePath()
                     logger.info("Created temporary file: $tempFilePath")
-    
+                    val args = mutableListOf("validate", tempFilePath.toString(),"--show-stack-trace")
+                    flags.forEach { flag ->
+                        args.add(flagToParam(flag))
+                    }    
                     // Write the body content to the temporary file
                     tempFile.appendText(body)
                     logger.info("Wrote body content to temporary file")
-                   logger.info(tempFilePath+" :tempfilepath");
+    
                     // Use async for parallelism
                     val result = async {
-                        executeCommand(listOf("validate", tempFilePath.toString(),"--show-stack-trace"))
+                        executeCommand(args)
                     }.await() // Wait for the result of the async execution
                     
                     logger.info("Validation result: ${result.second}")
