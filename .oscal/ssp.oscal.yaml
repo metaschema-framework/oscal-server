@@ -1,0 +1,26 @@
+component-definition:
+  uuid: 12345678-1234-1234-1234-123456789abc
+  metadata:
+    title: OSCAL Server Component Definition
+    last-modified: "2024-10-17T12:00:00Z"
+    version: "1.0"
+    oscal-version: "1.0.0"
+  components:
+    - uuid: 98765432-9876-9876-9876-987654321def
+      type: service
+      title: OSCAL Server
+      description: >
+        A service that runs through local loopback on port 8888
+      props:
+        - name: port
+          value: "8888"
+      protocols:
+        - name: https
+          port-ranges:
+            - start: 8888
+              end: 8888
+      remarks: >
+        This component definition describes the OSCAL Server, which provides
+        file conversion, validation and profile resolution
+        Security considerations should be taken into account when deploying
+        this service, especially regarding file system access controls.
