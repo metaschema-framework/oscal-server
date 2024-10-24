@@ -94,7 +94,7 @@ system-security-plan:
         by-components:
           - component-uuid: 55555555-0000-4000-9000-100000000005
             implementation-status:
-              state: implemented
+              state: planned
             description: >-
               Security requirements for software development are documented and maintained
               in the organization's security policy repository. Requirements are reviewed
@@ -105,7 +105,7 @@ system-security-plan:
         by-components:
           - component-uuid: 55555555-0000-4000-9000-100000000005
             implementation-status:
-              state: implemented
+              state: planned
             description: >-
               Development team roles and responsibilities are clearly defined in the
               organization's RACI matrix. Security training is provided quarterly
@@ -117,7 +117,7 @@ system-security-plan:
         by-components:
           - component-uuid: 55555555-0000-4000-9000-100000000005
             implementation-status:
-              state: implemented
+              state: planned
             description: >-
               Source code access is restricted using role-based access control.
               All code changes require peer review and approval before merging.
@@ -128,7 +128,7 @@ system-security-plan:
         by-components:
           - component-uuid: 66666666-0000-4000-9000-100000000006
             implementation-status:
-              state: implemented
+              state: planned
             description: >-
               Threat modeling is performed during design phase. Security requirements
               are tracked in the issue management system. Design decisions are
@@ -140,7 +140,7 @@ system-security-plan:
         by-components:
           - component-uuid: 66666666-0000-4000-9000-100000000006
             implementation-status:
-              state: implemented
+              state: planned
             description: >-
               Vulnerability scanning is automated in the CI/CD pipeline.
               Security findings are tracked and remediated based on severity.

@@ -14,10 +14,10 @@ component-definition:
       protocols:
         - name: https
           uuid: 2862dbd1-1d58-4caf-8b57-cb29d150d234
-
-          port-ranges:
+          port-ranges:            
             - start: 8888
-            - end: 8888
+              end: 8888
+              transport: TCP
       remarks: >
         This component definition describes the OSCAL Server, which provides
         file conversion, validation and profile resolution
