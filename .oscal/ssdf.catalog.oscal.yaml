@@ -395,7 +395,7 @@ catalog:
               props:
                 - name: label
                   value: PW.4.3
-                - name: status
+                - name: marking
                   value: withdrawn
               prose: '*Moved to PW.1.3*'
             - name: statement

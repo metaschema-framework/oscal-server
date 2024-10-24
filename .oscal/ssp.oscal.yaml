@@ -10,11 +10,16 @@ system-security-plan:
         type: organization
         name: "Metaschema Framework Orginization"
         short-name: "MFO"
-    roles:
+    roles:  
       - id: system-owner
         title: System Owner
       - id: security-officer 
         title: Security Officer
+      - id: developer
+        title: Software Developer
+      - id: security-engineer
+        title: Security Engineer
+
     responsible-parties:
       - role-id: system-owner
         party-uuids:
@@ -24,28 +29,7 @@ system-security-plan:
           - 11111111-0000-4000-9000-100000000001
 
   import-profile:
-    href: "#"
-    include-controls:
-      - with-ids:
-          - po1
-          - po2
-          - po3
-          - po4
-          - po5
-          - ps1
-          - ps2
-          - ps3
-          - pw1
-          - pw2
-          - pw4
-          - pw5
-          - pw6
-          - pw7
-          - pw8
-          - pw9
-          - rv1
-          - rv2
-          - rv3
+    href: "profile.oscal.yaml"
 
   system-characteristics:
     system-ids:
@@ -59,6 +43,7 @@ system-security-plan:
     system-information:
       information-types:
         - title: "Software Development Information"
+          uuid: 370026f8-582b-4c02-9331-a5c84afdbfd8
           description: "Source code, build configurations, and development artifacts"
           confidentiality-impact:
             level: moderate
