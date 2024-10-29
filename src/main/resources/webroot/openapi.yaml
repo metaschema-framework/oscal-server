@@ -29,7 +29,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uri
           description: URI of an OSCAL document to validate
           example: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
         - in: query
@@ -39,7 +38,6 @@ paths:
             type: array
             items:
               type: string
-              format: uri
           description: URIs of metaschema extension modules to load
           example: 
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
@@ -72,7 +70,6 @@ paths:
             type: array
             items:
               type: string
-              format: uri
           description: URIs of metaschema extension modules to load
           example: 
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
@@ -111,7 +108,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uri
           description: Absolute Path of the local OSCAL document to resolve
           example:
             - /Users/esper/fedramp-automation/dist/content/rev5/baselines/json/FedRAMP_rev5_HIGH-baseline_profile.json
@@ -167,7 +163,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uri
           description: URI of the remote OSCAL document to convert
         - in: query
           name: format
@@ -220,7 +215,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uri
           description: URI of the remote OSCAL document to convert
           example: https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
         - in: query
