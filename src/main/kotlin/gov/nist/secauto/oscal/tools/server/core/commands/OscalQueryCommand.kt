@@ -5,6 +5,8 @@
 
 package gov.nist.secauto.oscal.tools.server.core.commands
 
+import gov.nist.secauto.metaschema.core.metapath.item.JsonItemWriter;
+import gov.nist.secauto.metaschema.core.metapath.item.IItem;
 import gov.nist.secauto.oscal.lib.OscalModelConstants;
 import gov.nist.secauto.oscal.lib.model.OscalCompleteModule
 import gov.nist.secauto.oscal.lib.OscalBindingContext
@@ -107,15 +109,9 @@ class QueryCommand : AbstractTerminalCommand() {
         val cwd = Paths.get("").toAbsolutePath().toUri()
         LOGGER.info("Current working directory: $cwd")
 
-        val (module, item) = when {
-            cmdLine.hasOption(METASCHEMA_OPTION) -> {
-                LOGGER.info("Metaschema option detected")
+        val item: IItem? = when {
+            cmdLine.hasOption(CONTENT_OPTION) -> {
                 try {
-                    val moduleName = cmdLine.getOptionValue(METASCHEMA_OPTION)
-                    LOGGER.info("Module name: $moduleName")
-                    val moduleUri = UriUtils.toUri(moduleName, cwd)
-                    LOGGER.info("Module URI: $moduleUri")
-                    
                     val oscalBindingContext = OscalBindingContext.instance()
                     LOGGER.info("Created OSCAL binding context")
                     val module = oscalBindingContext.registerModule(OscalCompleteModule::class.java)
@@ -138,7 +134,7 @@ class QueryCommand : AbstractTerminalCommand() {
 
                         try {
                             LOGGER.info("Loading content as node item")
-                            Pair(module, loader.loadAsNodeItem(contentResource))
+                            loader.loadAsNodeItem(contentResource)
                         } catch (ex: IOException) {
                             LOGGER.error("Failed to load content", ex)
                             return ExitCode.INVALID_ARGUMENTS
@@ -147,7 +143,7 @@ class QueryCommand : AbstractTerminalCommand() {
                         }
                     } else {
                         LOGGER.info("No content option, creating new module node item")
-                        Pair(module, INodeItemFactory.instance().newModuleNodeItem(module))
+                        INodeItemFactory.instance().newModuleNodeItem(module)
                     }
                 } catch (ex: URISyntaxException) {
                     LOGGER.error("Invalid URI syntax", ex)
@@ -162,15 +158,9 @@ class QueryCommand : AbstractTerminalCommand() {
                     return ExitCode.PROCESSING_ERROR.exit().withThrowable(ex)
                 }
             }
-            cmdLine.hasOption(CONTENT_OPTION) -> {
-                LOGGER.warn("Content option provided without Metaschema option")
-                return ExitCode.INVALID_ARGUMENTS.exitMessage(
-                    "Must use '${CONTENT_OPTION.argName}' to specify the Metaschema module."
-                )
-            }
             else -> {
-                LOGGER.info("No Metaschema or Content option provided")
-                Pair(null, null)
+                LOGGER.info("No Content option provided")
+                null
             }
         }
 
@@ -184,8 +174,6 @@ class QueryCommand : AbstractTerminalCommand() {
             .defaultModelNamespace(OscalModelConstants.NS_URI_OSCAL)
             .build());
             LOGGER.info("Compiling Metapath expression")
-            LOGGER.info("Compiling Metapath expression")
-            LOGGER.info("Compiling Metapath expression")
             val compiledMetapath: MetapathExpression = MetapathExpression.compile(expression, staticContext)
             LOGGER.info("Metapath expression compiled successfully")
                     
@@ -196,7 +184,7 @@ class QueryCommand : AbstractTerminalCommand() {
             val stringWriter = StringWriter()
             PrintWriter(stringWriter).use { writer ->
                 LOGGER.info("Writing sequence to string")
-                val itemWriter: IItemWriter = DefaultItemWriter(writer)
+                val itemWriter: IItemWriter = JsonItemWriter(writer,OscalBindingContext.instance())
                 itemWriter.writeSequence(sequence)
             }
 
