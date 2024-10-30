@@ -174,12 +174,15 @@ class QueryCommand : AbstractTerminalCommand() {
             .defaultModelNamespace(OscalModelConstants.NS_URI_OSCAL)
             .build());
             LOGGER.info("Compiling Metapath expression")
-            try {
-                val compiledMetapath: MetapathExpression = MetapathExpression.compile(expression, staticContext)
-                LOGGER.info("Metapath expression compiled successfully")                
-            } catch (ex: ???) {
+             val compiledMetapath: MetapathExpression = try {
+                MetapathExpression.compile(expression, staticContext).also {
+                    LOGGER.info("Metapath expression compiled successfully")
+                }
+            } catch (ex: Exception) {  // Replace with actual exception type
                 LOGGER.error("Metapath expression did not compile", ex)
+                return ExitCode.FAIL.exit()
             }
+
                     
             LOGGER.info("Evaluating compiled Metapath expression")
             val sequence: ISequence<INodeItem> = compiledMetapath.evaluate<INodeItem>(item, dynamicContext)
