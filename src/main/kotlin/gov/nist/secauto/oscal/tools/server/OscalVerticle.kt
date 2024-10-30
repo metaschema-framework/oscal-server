@@ -4,6 +4,8 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
+import gov.nist.secauto.metaschema.databind.model.annotations.XmlNsForm
+import io.vertx.core.http.HttpMethod
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
@@ -11,6 +13,7 @@ import kotlinx.coroutines.async
 import java.util.UUID
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.handler.BodyHandler
+import io.vertx.ext.web.handler.CorsHandler 
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
 import io.vertx.ext.web.Router
@@ -67,11 +70,20 @@ class OscalVerticle : CoroutineVerticle() {
         val options = OpenAPILoaderOptions()
         val routerBuilder = RouterBuilder.create(vertx, "webroot/openapi.yaml", options).coAwait()
         logger.info("Router builder created")
-        
 
         // Add BodyHandler to handle file uploads
         routerBuilder.rootHandler(BodyHandler.create("webroot"))
-        
+
+        val corsHandler = CorsHandler.create("*")
+        .allowedMethod(HttpMethod.GET)
+        .allowedMethod(HttpMethod.POST)
+        .allowedMethod(HttpMethod.PUT)
+        .allowedMethod(HttpMethod.DELETE)
+        .allowedHeader("Content-Type")
+        .allowedHeader("Authorization")
+        .allowedHeader("Accept")
+
+
         routerBuilder.operation("validateUpload").handler { ctx -> handleValidateFileUpload(ctx) }
         routerBuilder.operation("validate").handler { ctx -> handleValidateRequest(ctx) }
         routerBuilder.operation("resolve").handler { ctx -> handleResolveRequest(ctx) }
@@ -83,6 +95,7 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("healthCheck").handler { ctx -> handleHealthCheck(ctx) }
 
         val router = routerBuilder.createRouter()
+        router.route().handler(corsHandler)
         router.route("/*").handler(StaticHandler.create("webroot"))
         return router
     }
@@ -180,14 +193,20 @@ class OscalVerticle : CoroutineVerticle() {
                 val body = ctx.body().asString()
                 logger.info("Received body: $body")
                 val flags = ctx.queryParam("flags")
-
+                val metaschemaModule = ctx.queryParam("module").firstOrNull()
+                
                 if (body.isNotEmpty()) {
                     // Create a temporary file
                     val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
 
                     val tempFilePath = tempFile.toAbsolutePath()
                     logger.info("Created temporary file: $tempFilePath")
-                    val args = mutableListOf("validate", tempFilePath.toString(),"--show-stack-trace")
+                    val command = if (metaschemaModule != null) "validate-metaschema-content" else "validate"
+                    val args = mutableListOf(command, tempFilePath.toString(),"--show-stack-trace")
+                    if (metaschemaModule != null) {
+                        args.add("-m")
+                        args.add(metaschemaModule)
+                    } 
                     flags.forEach { flag ->
                         args.add(flagToParam(flag))
                     }    
@@ -238,11 +257,17 @@ class OscalVerticle : CoroutineVerticle() {
             try {
                 logger.info("Handling Validate request")
                 val encodedContent = ctx.queryParam("document").firstOrNull()
+                val metaschemaModule = ctx.queryParam("module").firstOrNull()
                 val constraint = ctx.queryParam("constraint")
                 val flags = ctx.queryParam("flags")
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
-                    val args = mutableListOf("validate", content, "--show-stack-trace")
+                    val command = if (metaschemaModule != null) "validate-metaschema-content" else "validate"
+                    val args = mutableListOf(command, content,"--show-stack-trace")
+                    if (metaschemaModule != null) {
+                        args.add("-m")
+                        args.add(metaschemaModule)
+                    } 
                     constraint.forEach { constraint_document ->
                         args.add("-c")
                         args.add(processUrl(constraint_document))
@@ -386,7 +411,7 @@ class OscalVerticle : CoroutineVerticle() {
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
                 }
-                if (mutableArgs[0]=="validate"){
+                if (mutableArgs[0]=="validate"||mutableArgs[0]=="validate-metaschema-content"){
                     if(!mutableArgs.contains(("--sarif-include-pass"))){
                         mutableArgs.add("--sarif-include-pass")
                     }
