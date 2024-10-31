@@ -1,35 +1,45 @@
+/*
+ * SPDX-FileCopyrightText: none
+ * SPDX-License-Identifier: CC0-1.0
+ */
+
 package gov.nist.secauto.metaschema.server.commands
-import  gov.nist.secauto.metaschema.schemagen.SchemaGenerationFeature;
-import gov.nist.secauto.metaschema.core.model.util.XmlUtil;
-import gov.nist.secauto.metaschema.core.model.util.JsonUtil;
-import java.nio.charset.StandardCharsets;
-import org.json.JSONObject;
-import java.net.URI;
-import gov.nist.secauto.metaschema.core.configuration.DefaultConfiguration;
-import java.io.BufferedReader;
-import java.net.URISyntaxException;
-import gov.nist.secauto.oscal.lib.OscalBindingContext
+import gov.nist.secauto.metaschema.core.model.IModuleLoader;
+import gov.nist.secauto.metaschema.databind.codegen.IProduction;
+
+import gov.nist.secauto.metaschema.schemagen.SchemaGenerationFeature
+import gov.nist.secauto.metaschema.core.model.util.XmlUtil
+import gov.nist.secauto.metaschema.core.model.util.JsonUtil
+import gov.nist.secauto.metaschema.core.util.CollectionUtil
+import gov.nist.secauto.metaschema.databind.codegen.ModuleCompilerHelper
+import java.nio.charset.StandardCharsets
+import org.json.JSONObject
+import java.net.URI
+import gov.nist.secauto.metaschema.core.configuration.DefaultConfiguration
 import gov.nist.secauto.metaschema.cli.processor.CLIProcessor.CallingContext
 import gov.nist.secauto.metaschema.cli.processor.ExitCode
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
-import gov.nist.secauto.metaschema.cli.commands.MetaschemaCommands
 import gov.nist.secauto.metaschema.cli.processor.InvalidArgumentException
 import gov.nist.secauto.metaschema.cli.processor.command.AbstractTerminalCommand
 import gov.nist.secauto.metaschema.cli.processor.command.ICommandExecutor
 import gov.nist.secauto.metaschema.core.model.IModule
 import gov.nist.secauto.metaschema.core.model.MetaschemaException
+import gov.nist.secauto.metaschema.core.model.xml.ModuleLoader
+import gov.nist.secauto.metaschema.core.model.constraint.IConstraintSet
 import gov.nist.secauto.metaschema.databind.DefaultBindingContext
 import gov.nist.secauto.metaschema.databind.IBindingContext
 import gov.nist.secauto.metaschema.schemagen.ISchemaGenerator
 import gov.nist.secauto.metaschema.schemagen.ISchemaGenerator.SchemaFormat
 import org.apache.commons.cli.CommandLine
 import org.apache.commons.cli.Option
+import gov.nist.secauto.metaschema.core.model.xml.ExternalConstraintsModulePostProcessor
 import org.apache.logging.log4j.LogManager
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import javax.xml.transform.Source
+import java.util.Collections
 
 class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
 
@@ -69,12 +79,10 @@ class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
 
     protected fun executeCommand(callingContext: CallingContext, cmdLine: CommandLine): ExitStatus {
         LOGGER.info("Starting execution of ValidateContentUsingModuleCommand")
-        val cwd = Paths.get("").toAbsolutePath().toUri()
-        LOGGER.info("Current working directory: $cwd")
 
         return try {
             val bindingContext = DefaultBindingContext()
-            val module = loadOrCreateModule(cmdLine, bindingContext, cwd)
+            val module = loadOrCreateModule(cmdLine, bindingContext)
 
             // Validate content based on the loaded module
             validateModuleContent(module)
@@ -92,34 +100,71 @@ class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
 
     private fun loadOrCreateModule(
         cmdLine: CommandLine,
-        bindingContext: IBindingContext,
-        cwd: URI
+        bindingContext: IBindingContext
     ): IModule {
+        val metaschemaPath = cmdLine.getOptionValue(METASCHEMA_OPTION.opt)
+        val moduleUri = Paths.get(metaschemaPath).toAbsolutePath().toUri()
         val namespace = "namespace-based-name"  // Replace with actual namespace identifier
         val libPath = Paths.get(LIB_DIR, "module_${namespace.hashCode()}.jar")
-        val libFile = libPath.toFile()
-
-        return if (libFile.exists()) {
+        
+        Files.createDirectories(libPath.parent)
+        
+        return if (Files.exists(libPath)) {
             LOGGER.info("Loading existing module from $libPath")
-            try {
-                MetaschemaCommands.handleModule(cmdLine.getOptionValue(METASCHEMA_OPTION.opt), cwd)
-            } catch (ex: URISyntaxException) {
-                throw IOException("Invalid URI for module path.", ex)
-            }
+            loadModule(moduleUri)
         } else {
             LOGGER.info("Creating and saving new module to $libPath")
-            val module = MetaschemaCommands.handleModule(cmdLine.getOptionValue(METASCHEMA_OPTION.opt), cwd)
-            bindingContext.registerModule(module, getTempDir())
-            module.apply {
-                DefaultBindingContext.instance().serializeModule(this, Files.newOutputStream(libPath))
-            }
+            createAndSaveModule(moduleUri, libPath, bindingContext)
         }
+    }
+
+    @Throws(IOException::class, MetaschemaException::class)
+    private fun loadModule(moduleUri: URI): IModule {
+        val constraintSets = Collections.emptySet<IConstraintSet>()
+        val postProcessor = ExternalConstraintsModulePostProcessor(constraintSets)
+        val postProcessors: List<IModuleLoader.IModulePostProcessor> = listOf(postProcessor)
+        val loader = ModuleLoader(postProcessors).apply {
+            allowEntityResolution()
+        }
+        return loader.load(moduleUri)
+    }
+
+    private fun createAndSaveModule(
+        moduleUri: URI,
+        libPath: Path,
+        bindingContext: IBindingContext
+    ): IModule {
+        val module = loadModule(moduleUri)
+        
+        // Register the module with the binding context
+        bindingContext.registerModule(module)
+        
+        // Compile the module using ModuleCompilerHelper
+        val tempDir = getTempDir()
+        val production = ModuleCompilerHelper.compileMetaschema(module, tempDir)
+
+        val classLoader = ModuleCompilerHelper.newClassLoader(tempDir, this.javaClass.classLoader)
+        
+        // Get the bound module class and register it
+        val boundModuleClass = production.boundModuleClass
+        bindingContext.registerModule(boundModuleClass)
+        
+
+      // Copy the compiled classes to the lib directory
+        Files.walk(tempDir)
+            .filter { Files.isRegularFile(it) }
+            .forEach { source ->
+                val target = libPath.resolve(tempDir.relativize(source))
+                Files.createDirectories(target.parent)
+                Files.copy(source, target)
+            }
+        
+        return module
     }
 
     private fun validateModuleContent(module: IModule) {
         LOGGER.info("Validating module content")
         // Implement validation logic based on module
-        // This can include specific rule checks or validations based on the provided module
     }
 
     private fun getTempDir(): Path = Files.createTempDirectory("validation-").apply {
@@ -139,7 +184,7 @@ class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
         val schemaFile = Files.createTempFile(getTempDir(), "schema-", ".json")
         val configuration = DefaultConfiguration<SchemaGenerationFeature<*>>()
         ISchemaGenerator.generateSchema(module, schemaFile, SchemaFormat.JSON, configuration)
-        return BufferedReader(Files.newBufferedReader(schemaFile, StandardCharsets.UTF_8)).use { reader ->
+        return Files.newBufferedReader(schemaFile, StandardCharsets.UTF_8).use { reader ->
             JsonUtil.toJsonObject(reader)
         }
     }
