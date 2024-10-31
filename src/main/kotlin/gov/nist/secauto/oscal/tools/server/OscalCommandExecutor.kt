@@ -30,8 +30,7 @@ import gov.nist.secauto.oscal.tools.cli.core.commands.ConvertCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ResolveCommand
 import gov.nist.secauto.oscal.tools.server.core.commands.QueryCommand
-import gov.nist.secauto.metaschema.cli.commands.ValidateContentUsingModuleCommand;
-
+import gov.nist.secauto.metaschema.server.commands.ValidateContentUsingModuleCommand;
 open class OscalCommandExecutor(
     protected val command: String,
     protected val args: List<String>,
