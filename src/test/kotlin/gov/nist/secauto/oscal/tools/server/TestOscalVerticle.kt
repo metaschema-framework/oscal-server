@@ -179,6 +179,33 @@ class TestOscalVerticle {
             // Files.deleteIfExists(catalogFile)
         }
     }
+    @Test
+    fun test_oscal_command_validate_metaschema_content(testContext: TestContext) {
+        val async = testContext.async()
+
+        val url = ("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/unit-tests/attachment-type-FAIL.yaml")
+        val moduleUrl = ("https://raw.githubusercontent.com/aj-stein-gsa/fedramp-automation/bd294a32d23114bdcf52aeeca2d81f785fd5bc37/src/validations/constraints/unit-tests/unit_test_metaschema.xml")
+
+        try {
+            webClient.get("/validate")
+                .addQueryParam("document", url)
+                .addQueryParam("module", moduleUrl)
+                .send { ar ->
+                    if (ar.succeeded()) {
+                        val response = ar.result()
+                        testContext.assertEquals(200, response.statusCode())
+                        val body = response.bodyAsJsonObject()
+                        testContext.assertEquals("OK", response.getHeader("Exit-Status"))
+                        testContext.assertNotNull(body)
+                        async.complete()
+                    } else {
+                        logger.error("Resolve request failed", ar.cause())
+                        testContext.fail(ar.cause())
+                    }
+                }
+        } finally {
+        }
+    }
 
     @Test
     fun test_oscal_command_convert(testContext: TestContext) {
