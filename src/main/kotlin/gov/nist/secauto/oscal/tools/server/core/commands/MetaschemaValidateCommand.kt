@@ -3,28 +3,30 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
-package gov.nist.secauto.metaschema.server.commands
-import gov.nist.secauto.metaschema.core.model.IModuleLoader;
-import gov.nist.secauto.metaschema.databind.codegen.IProduction;
+package gov.nist.secauto.oscal.tools.server.core.commands
 
 import gov.nist.secauto.metaschema.schemagen.SchemaGenerationFeature
 import gov.nist.secauto.metaschema.core.model.util.XmlUtil
 import gov.nist.secauto.metaschema.core.model.util.JsonUtil
 import gov.nist.secauto.metaschema.core.util.CollectionUtil
 import gov.nist.secauto.metaschema.databind.codegen.ModuleCompilerHelper
+import gov.nist.secauto.metaschema.databind.codegen.IProduction
+import gov.nist.secauto.metaschema.databind.model.IBoundModule
 import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 import java.net.URI
+import gov.nist.secauto.metaschema.cli.commands.AbstractValidateContentCommand;
+
 import gov.nist.secauto.metaschema.core.configuration.DefaultConfiguration
 import gov.nist.secauto.metaschema.cli.processor.CLIProcessor.CallingContext
 import gov.nist.secauto.metaschema.cli.processor.ExitCode
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import gov.nist.secauto.metaschema.cli.processor.InvalidArgumentException
-import gov.nist.secauto.metaschema.cli.processor.command.AbstractTerminalCommand
 import gov.nist.secauto.metaschema.cli.processor.command.ICommandExecutor
 import gov.nist.secauto.metaschema.core.model.IModule
 import gov.nist.secauto.metaschema.core.model.MetaschemaException
 import gov.nist.secauto.metaschema.core.model.xml.ModuleLoader
+import gov.nist.secauto.metaschema.core.model.IModuleLoader;
 import gov.nist.secauto.metaschema.core.model.constraint.IConstraintSet
 import gov.nist.secauto.metaschema.databind.DefaultBindingContext
 import gov.nist.secauto.metaschema.databind.IBindingContext
@@ -41,11 +43,11 @@ import java.nio.file.Paths
 import javax.xml.transform.Source
 import java.util.Collections
 
-class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
+class ValidateMetaschemaContent : AbstractValidateContentCommand() {
+    protected val LOGGER = LogManager.getLogger(this::class.java)
 
     companion object {
-        private val LOGGER = LogManager.getLogger(ValidateContentUsingModuleCommand::class.java)
-        private const val COMMAND = "validate-content"
+        private const val COMMAND = "validate-metaschema-content"
         private const val LIB_DIR = "lib"  // Directory for storing modules
 
         val METASCHEMA_OPTION: Option = Option.builder("m")
@@ -61,14 +63,15 @@ class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
     override fun getDescription(): String =
         "Verify that the provided resource is well-formed and valid to the provided Module-based model."
 
-    override fun gatherOptions(): Collection<Option> = listOf(METASCHEMA_OPTION)
+    override fun gatherOptions(): Collection<Option> = listOf(METASCHEMA_OPTION) + super.gatherOptions()
 
     override fun validateOptions(callingContext: CallingContext, cmdLine: CommandLine) {
         LOGGER.info("Validating command options")
         val extraArgs = cmdLine.argList
-        if (extraArgs.isNotEmpty()) {
-            LOGGER.warn("Extra arguments detected: $extraArgs")
-            throw InvalidArgumentException("Illegal number of extra arguments.")
+        if (extraArgs.isEmpty()) {
+            LOGGER.warn("No file args detected")
+        }else{
+            LOGGER.info(" $extraArgs")
         }
         LOGGER.info("Command options validated successfully")
     }
@@ -78,7 +81,7 @@ class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
     }
 
     protected fun executeCommand(callingContext: CallingContext, cmdLine: CommandLine): ExitStatus {
-        LOGGER.info("Starting execution of ValidateContentUsingModuleCommand")
+        LOGGER.debug("Starting execution of ValidateContentUsingModuleCommand")
 
         return try {
             val bindingContext = DefaultBindingContext()
@@ -134,23 +137,24 @@ class ValidateContentUsingModuleCommand : AbstractTerminalCommand() {
         libPath: Path,
         bindingContext: IBindingContext
     ): IModule {
+        LOGGER.info(moduleUri);
         val module = loadModule(moduleUri)
-        
-        // Register the module with the binding context
-        bindingContext.registerModule(module)
-        
         // Compile the module using ModuleCompilerHelper
         val tempDir = getTempDir()
-        val production = ModuleCompilerHelper.compileMetaschema(module, tempDir)
-
+        val production: IProduction = ModuleCompilerHelper.compileMetaschema(module, tempDir)
+        
+        // Create a new classloader for the compiled classes
         val classLoader = ModuleCompilerHelper.newClassLoader(tempDir, this.javaClass.classLoader)
         
-        // Get the bound module class and register it
-        val boundModuleClass = production.boundModuleClass
-        bindingContext.registerModule(boundModuleClass)
+        // Get the generated module class from the production
+        val moduleProduction = production.getModuleProduction(module)
+        if (moduleProduction != null) {
+            bindingContext.registerModule(moduleProduction as Class<out IBoundModule>)
+        } else {
+            throw IllegalStateException("Failed to generate module class for $module")
+        }
         
-
-      // Copy the compiled classes to the lib directory
+        // Copy the compiled classes to the lib directory
         Files.walk(tempDir)
             .filter { Files.isRegularFile(it) }
             .forEach { source ->
