@@ -30,7 +30,7 @@ paths:
           schema:
             type: string
           description: URI of an OSCAL document to validate
-          example: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
+          example: https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/unit-tests/attachment-type-FAIL.yaml
         - in: query
           name: constraint
           required: false
@@ -39,16 +39,13 @@ paths:
             items:
               type: string
           description: URIs of metaschema extension modules to load
-          example: 
-            - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
-            - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
         - in: query
           name: module
           required: false
           schema:
             type: string
           description: Metaschema-module
-          example: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
+          example: https://raw.githubusercontent.com/aj-stein-gsa/fedramp-automation/bd294a32d23114bdcf52aeeca2d81f785fd5bc37/src/validations/constraints/unit-tests/unit_test_metaschema.xml
         - in: query
           name: flags
           required: false
@@ -78,9 +75,6 @@ paths:
             items:
               type: string
           description: URIs of metaschema extension modules to load
-          example: 
-            - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
-            - https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/unit-tests/attachment-type-FAIL.yaml
         - in: query
           name: module
           required: false
