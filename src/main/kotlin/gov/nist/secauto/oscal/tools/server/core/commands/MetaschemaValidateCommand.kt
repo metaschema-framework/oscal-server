@@ -101,14 +101,22 @@ class ValidateMetaschemaContent : AbstractValidateContentCommand() {
         }
     }
 
-    private fun loadOrCreateModule(
+   private fun loadOrCreateModule(
         cmdLine: CommandLine,
         bindingContext: IBindingContext
     ): IModule {
         val metaschemaPath = cmdLine.getOptionValue(METASCHEMA_OPTION.opt)
-        val moduleUri = Paths.get(metaschemaPath).toAbsolutePath().toUri()
-        val namespace = "namespace-based-name"  // Replace with actual namespace identifier
-        val libPath = Paths.get(LIB_DIR, "module_${namespace.hashCode()}.jar")
+        val moduleUri = try {
+            // First try to parse as URL
+            URI(metaschemaPath)
+        } catch (ex: Exception) {
+            // If not a valid URL, treat as local file path
+            Paths.get(metaschemaPath).toAbsolutePath().toUri()
+        }
+        
+        // Generate a consistent namespace based on the URI
+        val namespace = moduleUri.toString().hashCode().toString()
+        val libPath = Paths.get(LIB_DIR, "module_$namespace.jar")
         
         Files.createDirectories(libPath.parent)
         
@@ -123,13 +131,20 @@ class ValidateMetaschemaContent : AbstractValidateContentCommand() {
 
     @Throws(IOException::class, MetaschemaException::class)
     private fun loadModule(moduleUri: URI): IModule {
+        LOGGER.info("Loading module from URI: $moduleUri")
         val constraintSets = Collections.emptySet<IConstraintSet>()
         val postProcessor = ExternalConstraintsModulePostProcessor(constraintSets)
         val postProcessors: List<IModuleLoader.IModulePostProcessor> = listOf(postProcessor)
         val loader = ModuleLoader(postProcessors).apply {
             allowEntityResolution()
         }
-        return loader.load(moduleUri)
+        
+        return try {
+            loader.load(moduleUri)
+        } catch (ex: Exception) {
+            LOGGER.error("Failed to load module from URI: $moduleUri", ex)
+            throw ex
+        }
     }
 
     private fun createAndSaveModule(

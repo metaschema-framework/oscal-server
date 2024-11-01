@@ -4,7 +4,6 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
-import gov.nist.secauto.metaschema.databind.model.annotations.XmlNsForm
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions;
@@ -257,9 +256,9 @@ class OscalVerticle : CoroutineVerticle() {
             try {
                 logger.info("Handling Validate request")
                 val encodedContent = ctx.queryParam("document").firstOrNull()
-                val metaschemaModule = ctx.queryParam("module").firstOrNull()
                 val constraint = ctx.queryParam("constraint")
                 val flags = ctx.queryParam("flags")
+                val metaschemaModule = ctx.queryParam("module").firstOrNull()
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
                     val command = if (metaschemaModule != null) "validate-metaschema-content" else "validate"

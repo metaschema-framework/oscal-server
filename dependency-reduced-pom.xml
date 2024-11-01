@@ -302,7 +302,7 @@
     </dependency>
     <dependency>
       <groupId>dev.metaschema.java</groupId>
-      <artifactId>metaschema-cli</artifactId>
+      <artifactId>metaschema-schema-generator</artifactId>
       <version>1.2.0</version>
       <scope>compile</scope>
       <exclusions>
@@ -314,7 +314,43 @@
     </dependency>
     <dependency>
       <groupId>dev.metaschema.java</groupId>
-      <artifactId>metaschema-schema-generator</artifactId>
+      <artifactId>metaschema-core</artifactId>
+      <version>1.2.0</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>log4j-core</artifactId>
+          <groupId>org.apache.logging.log4j</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-databind-modules</artifactId>
+      <version>1.2.0</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>log4j-core</artifactId>
+          <groupId>org.apache.logging.log4j</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-databind</artifactId>
+      <version>1.2.0</version>
+      <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>log4j-core</artifactId>
+          <groupId>org.apache.logging.log4j</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-cli</artifactId>
       <version>1.2.0</version>
       <scope>compile</scope>
       <exclusions>

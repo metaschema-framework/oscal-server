@@ -30,7 +30,7 @@ import gov.nist.secauto.oscal.tools.cli.core.commands.ConvertCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ResolveCommand
 import gov.nist.secauto.oscal.tools.server.core.commands.QueryCommand
-import gov.nist.secauto.metaschema.server.commands.ValidateContentUsingModuleCommand;
+import gov.nist.secauto.oscal.tools.server.core.commands.ValidateMetaschemaContent
 open class OscalCommandExecutor(
     protected val command: String,
     protected val args: List<String>,
@@ -39,7 +39,7 @@ open class OscalCommandExecutor(
     protected val logger: Logger = LogManager.getLogger(this::class.java)
     protected open val commands: Map<String, () -> ICommand> = mapOf(
         "validate" to ::ValidateCommand,
-        "validate-metaschema-content" to ::ValidateContentUsingModuleCommand,
+        "validate-metaschema-content" to ::ValidateMetaschemaContent,
         "convert" to ::ConvertCommand,
         "query" to ::QueryCommand,
         "resolve-profile" to ::ResolveCommand
@@ -117,6 +117,7 @@ open class OscalCommandExecutor(
                     }
                     cmdLine = parser.parse(phase1Options, oscalExtraArgs.toTypedArray(), true)
                 } catch (ex: ParseException) {
+                    logger.error(ex)
                     return handleInvalidCommand(ex.message ?: "Invalid command")
                 }
 
@@ -151,6 +152,7 @@ open class OscalCommandExecutor(
 
                 val targetCommand = oscalCalledCommands.lastOrNull()
                 if (targetCommand == null) {
+                    logger.info(oscalCalledCommands)
                     ExitCode.INVALID_COMMAND.exit()
                 } else {
                     val executor = targetCommand.newExecutor(this, cmdLine)
@@ -165,6 +167,7 @@ open class OscalCommandExecutor(
         }
 
         override fun handleInvalidCommand(message: String): ExitStatus {
+            logger.error(message);
             val status = ExitCode.INVALID_COMMAND.exitMessage(message)
             return status
         }
