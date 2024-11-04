@@ -48,12 +48,13 @@ open class OscalCommandExecutor(
         return OscalBindingContext.instance()
     }
 
-    override fun execute(): ExitStatus {
+    override fun execute() {
         logger.info("Executing command: $command")
         logger.info("With args: $args")
 
         val callingContext = createCallingContext(command, args)
-        return callingContext.processCommand()
+        callingContext.processCommand()
+        return;
     }
 
     protected open fun createCallingContext(command: String, args: List<String>): OscalCallingContext {
@@ -154,6 +155,7 @@ open class OscalCommandExecutor(
                 } else {
                     val executor = targetCommand.newExecutor(this, cmdLine)
                     executor.execute()
+                    ExitCode.OK.exit()
                 }
             } catch (ex: RuntimeException) {
                 logger.info(ex.toString())

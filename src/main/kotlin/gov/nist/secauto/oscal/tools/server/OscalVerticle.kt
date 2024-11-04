@@ -4,6 +4,7 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
+import gov.nist.secauto.metaschema.cli.processor.ExitCode
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
@@ -398,8 +399,9 @@ class OscalVerticle : CoroutineVerticle() {
                 mutableArgs.add(sarifFilePath)
 
                 val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs)
-                val exitStatus = oscalCommandExecutor.execute()
         
+                oscalCommandExecutor.execute()
+                val exitStatus = ExitCode.OK.exit();
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
                     val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())

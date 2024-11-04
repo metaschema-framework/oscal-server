@@ -216,4 +216,7 @@ private fun Any?.serializeValue(): String {
         override fun visit(node: INodeItem) = writeNode(node)
         override fun visit(node: IAnyAtomicItem) = writeAtomicValue(node)
     }
+    override fun close() {
+        writer.close()
+    }
 }

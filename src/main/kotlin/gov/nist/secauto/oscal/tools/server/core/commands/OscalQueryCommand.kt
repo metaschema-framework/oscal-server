@@ -4,7 +4,6 @@
  */
 
 package gov.nist.secauto.oscal.tools.server.core.commands
-
 import gov.nist.secauto.metaschema.core.metapath.item.JsonItemWriter;
 import gov.nist.secauto.metaschema.core.metapath.item.IItem;
 import gov.nist.secauto.oscal.lib.OscalModelConstants;
@@ -45,6 +44,7 @@ import java.nio.file.Paths
 
 class QueryCommand : AbstractTerminalCommand() {
     companion object {
+
         private val LOGGER = LogManager.getLogger(QueryCommand::class.java)
 
         private const val COMMAND = "eval"
@@ -100,8 +100,11 @@ class QueryCommand : AbstractTerminalCommand() {
     }
 
     override fun newExecutor(callingContext: CallingContext, cmdLine: CommandLine): ICommandExecutor {
-        LOGGER.info("Creating new executor for QueryCommand")
-        return ICommandExecutor.using(callingContext, cmdLine) { ctx, cmd -> executeCommand(ctx, cmd) }
+        return object : ICommandExecutor {
+            override fun execute() {
+                executeCommand(callingContext, cmdLine)
+            }
+        }
     }
 
     protected fun executeCommand(callingContext: CallingContext, cmdLine: CommandLine): ExitStatus {
@@ -124,7 +127,7 @@ class QueryCommand : AbstractTerminalCommand() {
 
                         val contentResource = try {
                             LOGGER.info("Attempting to handle content resource")
-                            MetaschemaCommands.handleResource(cmdLine.getOptionValue(CONTENT_OPTION), cwd)
+                            UriUtils.toUri(cmdLine.getOptionValue(CONTENT_OPTION), cwd);
                         } catch (ex: IOException) {
                             LOGGER.error("Failed to resolve content location", ex)
                             return ExitCode.INVALID_ARGUMENTS
@@ -134,7 +137,7 @@ class QueryCommand : AbstractTerminalCommand() {
 
                         try {
                             LOGGER.info("Loading content as node item")
-                            loader.loadAsNodeItem(contentResource)
+                            loader.loadAsNodeItem(contentResource as URI)
                         } catch (ex: IOException) {
                             LOGGER.error("Failed to load content", ex)
                             return ExitCode.INVALID_ARGUMENTS
