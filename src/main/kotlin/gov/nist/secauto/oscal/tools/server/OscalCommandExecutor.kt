@@ -30,6 +30,7 @@ import gov.nist.secauto.oscal.tools.cli.core.commands.ConvertCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ValidateCommand
 import gov.nist.secauto.oscal.tools.cli.core.commands.ResolveCommand
 import gov.nist.secauto.oscal.tools.server.core.commands.QueryCommand
+import gov.nist.secauto.metaschema.cli.commands.ValidateModuleCommand
 
 open class OscalCommandExecutor(
     protected val command: String,
@@ -39,6 +40,7 @@ open class OscalCommandExecutor(
     protected val logger: Logger = LogManager.getLogger(this::class.java)
     protected open val commands: Map<String, () -> ICommand> = mapOf(
         "validate" to ::ValidateCommand,
+        "validate-metaschema" to ::ValidateModuleCommand,
         "convert" to ::ConvertCommand,
         "query" to ::QueryCommand,
         "resolve-profile" to ::ResolveCommand
