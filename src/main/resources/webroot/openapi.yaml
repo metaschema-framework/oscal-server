@@ -43,6 +43,13 @@ paths:
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
         - in: query
+          name: module
+          required: false
+          schema:
+            type: string
+            enum: [http://csrc.nist.gov/ns/oscal/metaschema/1.0,http://csrc.nist.gov/ns/oscal/1.0]
+          description: URI or NS of metaschema module
+        - in: query
           name: flags
           required: false
           schema:
@@ -74,6 +81,13 @@ paths:
           example: 
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
             - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
+        - in: query
+          name: module
+          required: false
+          schema:
+            type: string
+            enum: [http://csrc.nist.gov/ns/oscal/metaschema/1.0,http://csrc.nist.gov/ns/oscal/1.0]
+          description: URI or NS of metaschema module
         - in: query
           name: flags
           required: false

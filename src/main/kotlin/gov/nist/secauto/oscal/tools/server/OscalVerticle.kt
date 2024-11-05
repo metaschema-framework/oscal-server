@@ -180,6 +180,7 @@ class OscalVerticle : CoroutineVerticle() {
                 val body = ctx.body().asString()
                 logger.info("Received body: $body")
                 val flags = ctx.queryParam("flags")
+                val encodedModule = ctx.queryParam("module").firstOrNull()
 
                 if (body.isNotEmpty()) {
                     // Create a temporary file
@@ -187,7 +188,14 @@ class OscalVerticle : CoroutineVerticle() {
 
                     val tempFilePath = tempFile.toAbsolutePath()
                     logger.info("Created temporary file: $tempFilePath")
-                    val args = mutableListOf("validate", tempFilePath.toString(),"--show-stack-trace")
+                    var command = "validate"
+                    encodedModule?.let { module ->
+                        if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
+                            command = "validate-metaschema"
+                        }
+                    }
+
+                    val args = mutableListOf(command, tempFilePath.toString(),"--show-stack-trace")
                     flags.forEach { flag ->
                         args.add(flagToParam(flag))
                     }    
@@ -238,11 +246,18 @@ class OscalVerticle : CoroutineVerticle() {
             try {
                 logger.info("Handling Validate request")
                 val encodedContent = ctx.queryParam("document").firstOrNull()
+                val encodedModule = ctx.queryParam("module").firstOrNull()
                 val constraint = ctx.queryParam("constraint")
                 val flags = ctx.queryParam("flags")
                 if (encodedContent != null) {
                     val content = processUrl(encodedContent)
-                    val args = mutableListOf("validate", content, "--show-stack-trace")
+                    var command = "validate"
+                    encodedModule?.let { module ->
+                        if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
+                            command = "validate-metaschema"
+                        }
+                    }
+                    val args = mutableListOf(command, content, "--show-stack-trace")
                     constraint.forEach { constraint_document ->
                         args.add("-c")
                         args.add(processUrl(constraint_document))
@@ -392,7 +407,7 @@ class OscalVerticle : CoroutineVerticle() {
                     }
                     mutableArgs.add("-o")    
                 }
-                if (mutableArgs[0] == "query"){
+                if (mutableArgs[0] == "query"||mutableArgs[0]=="validate-metaschema"){
                     mutableArgs.add("-o")    
                 }
                 mutableArgs.add(sarifFilePath)
