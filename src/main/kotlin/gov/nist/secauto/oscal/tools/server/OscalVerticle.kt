@@ -5,7 +5,7 @@
 
 package gov.nist.secauto.oscal.tools.server
 import gov.nist.secauto.metaschema.databind.io.IBoundLoader;
-
+import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion;
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
@@ -416,20 +416,22 @@ class OscalVerticle : CoroutineVerticle() {
 
                 logger.info(mutableArgs.joinToString(" "))
                 val exitStatus = CLI.runCli(*mutableArgs.toTypedArray())
-                try {
-                    val messageStatus = exitStatus as MessageExitStatus
-                    messageStatus.message?.let { message ->
-                        if (message.isNotEmpty()) {
-                            logger.error(message)
-                        }
-                    }
-                } catch (e: ClassCastException) {
-                    // Handle case where exitStatus is not a MessageExitStatus
-                    logger.info(exitStatus.exitCode.toString())
-                }               
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
-                    val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
+                    val exitCode = "code:${exitStatus.exitCode}"
+                    val basicSarif = when (exitStatus) {
+                        is MessageExitStatus -> {
+                            // Always create SARIF, but include message if available
+                            val message = exitStatus.message
+                            if (!message.isNullOrEmpty()) {
+                                createBasicSarif(exitCode+" "+ message)
+                            } else {
+                                createBasicSarif(exitCode)
+                            }
+                        }
+                        else -> createBasicSarif(exitCode)
+                    }
+                    
                     File(sarifFilePath).writeText(basicSarif)
                 }
                 activeWorkers.decrementAndGet()
@@ -439,6 +441,7 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun createBasicSarif(errorMessage: String): String {
+        val version = OscalCliVersion();
         return """
         {
           "${'$'}schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
@@ -449,7 +452,7 @@ class OscalVerticle : CoroutineVerticle() {
                 "driver": {
                   "name": "OSCAL Tool",
                   "informationUri": "https://pages.nist.gov/OSCAL/",
-                  "version": "1.0.0"
+                  "version": "$version"
                 }
               },
               "results": [
