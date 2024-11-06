@@ -4,6 +4,8 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
+import gov.nist.secauto.metaschema.databind.io.IBoundLoader;
+
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
@@ -192,7 +194,10 @@ class OscalVerticle : CoroutineVerticle() {
                     encodedModule?.let { module ->
                         if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
                             command = "metaschema validate"
+                        }else{
+                            command = "metaschema validate-content"
                         }
+
                     }
 
                     val args = mutableListOf(command, tempFilePath.toString(),"--show-stack-trace")
@@ -403,21 +408,30 @@ class OscalVerticle : CoroutineVerticle() {
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
                 }
-                if (mutableArgs[0]=="validate"){
+                if (listOf("metaschema metapath eval","validate","metaschema validate").contains(mutableArgs[0])){
                     if(!mutableArgs.contains(("--sarif-include-pass"))){
                         mutableArgs.add("--sarif-include-pass")
                     }
                     mutableArgs.add("-o")    
                 }
-                if (mutableArgs[0] == "query"||mutableArgs[0]=="validate-metaschema"){
-                    mutableArgs.add("-o")    
-                }
+
                 mutableArgs.add(sarifFilePath)
 
-                logger.info(mutableArgs.joinToString(" "))
+                for (item in mutableArgs.toTypedArray()) {
+                    logger.error(item.toString())
+                }
                 val exitStatus = CLI.runCli(*mutableArgs.toTypedArray())
-                
-                // Check if SARIF file was created
+                try {
+                    val messageStatus = exitStatus as MessageExitStatus
+                    messageStatus.message?.let { message ->
+                        if (message.isNotEmpty()) {
+                            logger.error(message)
+                        }
+                    }
+                } catch (e: ClassCastException) {
+                    // Handle case where exitStatus is not a MessageExitStatus
+                    logger.error(exitStatus.exitCode.toString())
+                }                // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
                     val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
                     File(sarifFilePath).writeText(basicSarif)
