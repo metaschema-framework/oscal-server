@@ -148,7 +148,7 @@ class OscalVerticle : CoroutineVerticle() {
             val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
             
             val result = when {
-                System.getProperty("os.name").toLowerCase().contains("win") -> {
+                System.getProperty("os.name").lowercase().contains("win") -> {
                     // Windows-specific handling
                     if (decodedPath.startsWith("/")) {
                         // Absolute path with drive letter
@@ -392,10 +392,7 @@ class OscalVerticle : CoroutineVerticle() {
     private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
         return withContext(vertx.dispatcher()) {
-            awaitBlocking {
-
-                val command = args[0]
-                                
+            awaitBlocking {                                
                 // Create a mutable list from args
                 val mutableArgs = args.toMutableList()
         
@@ -417,9 +414,7 @@ class OscalVerticle : CoroutineVerticle() {
 
                 mutableArgs.add(sarifFilePath)
 
-                for (item in mutableArgs.toTypedArray()) {
-                    logger.error(item.toString())
-                }
+                logger.info(mutableArgs.joinToString(" "))
                 val exitStatus = CLI.runCli(*mutableArgs.toTypedArray())
                 try {
                     val messageStatus = exitStatus as MessageExitStatus
@@ -430,8 +425,9 @@ class OscalVerticle : CoroutineVerticle() {
                     }
                 } catch (e: ClassCastException) {
                     // Handle case where exitStatus is not a MessageExitStatus
-                    logger.error(exitStatus.exitCode.toString())
-                }                // Check if SARIF file was created
+                    logger.info(exitStatus.exitCode.toString())
+                }               
+                // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
                     val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
                     File(sarifFilePath).writeText(basicSarif)
