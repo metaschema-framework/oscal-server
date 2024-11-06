@@ -5,7 +5,6 @@ FROM eclipse-temurin:17-jdk-focal
 
 # Set environment variables
 ENV VERTICLE_NAME=gov.nist.secauto.oscal.tools.server.OscalVerticle
-ENV VERTICLE_FILE=server-1.0.0-SNAPSHOT.jar
 ENV APP_HOME /usr/app
 
 # Create the application directory

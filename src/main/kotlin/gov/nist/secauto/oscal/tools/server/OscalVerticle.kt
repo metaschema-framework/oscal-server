@@ -25,7 +25,6 @@ import io.vertx.kotlin.coroutines.dispatcher
 import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
-import gov.nist.secauto.oscal.tools.server.commands.OscalCommandExecutor
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import java.io.ByteArrayOutputStream
@@ -41,6 +40,7 @@ import java.nio.charset.StandardCharsets
 import io.vertx.kotlin.coroutines.awaitBlocking
 import kotlin.io.path.appendText
 import java.util.concurrent.atomic.AtomicInteger
+import gov.nist.secauto.oscal.tools.cli.core.CLI;
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
@@ -106,7 +106,7 @@ class OscalVerticle : CoroutineVerticle() {
                 val expression = ctx.queryParam("expression").firstOrNull()
                 if (encodedContent != null && expression != null) {
                     val content = processUrl(encodedContent)
-                    val args = mutableListOf("query")
+                    val args = mutableListOf("metaschema metapath eval")
                     args.add("-i")
                     args.add(content)
                     args.add("-e")
@@ -191,7 +191,7 @@ class OscalVerticle : CoroutineVerticle() {
                     var command = "validate"
                     encodedModule?.let { module ->
                         if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                            command = "validate-metaschema"
+                            command = "metaschema validate"
                         }
                     }
 
@@ -254,7 +254,9 @@ class OscalVerticle : CoroutineVerticle() {
                     var command = "validate"
                     encodedModule?.let { module ->
                         if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                            command = "validate-metaschema"
+                            command = "metaschema validate"
+                        }else{
+                            command = "metaschema validate-content"
                         }
                     }
                     val args = mutableListOf(command, content, "--show-stack-trace")
@@ -412,9 +414,9 @@ class OscalVerticle : CoroutineVerticle() {
                 }
                 mutableArgs.add(sarifFilePath)
 
-                val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs)
-                val exitStatus = oscalCommandExecutor.execute()
-        
+                logger.info(mutableArgs.joinToString(" "))
+                val exitStatus = CLI.runCli(*mutableArgs.toTypedArray())
+                
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
                     val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
@@ -492,7 +494,7 @@ class OscalVerticle : CoroutineVerticle() {
                 tempFile.appendText(body)
                 logger.info("Wrote body content to temporary file")
 
-                val args = mutableListOf("query")
+                val args = mutableListOf("metaschema metapath eval")
                 args.add("-i")
                 args.add(processUrl(tempFilePath.toString()))
                 args.add("-e")
