@@ -451,7 +451,7 @@ class OscalVerticle : CoroutineVerticle() {
               "tool": {
                 "driver": {
                   "name": "OSCAL Tool",
-                  "informationUri": "https://pages.nist.gov/OSCAL/",
+                  "informationUri": "https://github.com/metaschema-framework/oscal-server",
                   "version": "$version"
                 }
               },
