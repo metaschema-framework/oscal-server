@@ -13,6 +13,8 @@ import kotlinx.coroutines.async
 import java.util.UUID
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.handler.BodyHandler
+import gov.nist.secauto.metaschema.cli.processor.ExitCode
+import gov.nist.secauto.metaschema.cli.processor.ExitCode.RUNTIME_ERROR
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
 import io.vertx.ext.web.Router
@@ -136,10 +138,7 @@ class OscalVerticle : CoroutineVerticle() {
     
 
     private fun processUrl(url: String): String {
-        logger.info("processUrl input: $url")
-        
         if (!url.startsWith("file://")) {
-            logger.info("processUrl output (unchanged): $url")
             return url
         }
 
@@ -162,13 +161,9 @@ class OscalVerticle : CoroutineVerticle() {
                     // Unix-like systems
                     decodedPath
                 }
-            }
-            
-            logger.info("processUrl output: $result")
+            }            
             return result
         } catch (e: Exception) {
-            logger.error("Error processing file URL: $url", e)
-            logger.info("processUrl output (error case): $url")
             return url
         }
     }
@@ -419,7 +414,12 @@ class OscalVerticle : CoroutineVerticle() {
                 mutableArgs.add(sarifFilePath)
 
                 logger.info(mutableArgs.joinToString(" "))
-                val exitStatus = CLI.runCli(*mutableArgs.toTypedArray())
+                
+                val exitStatus = try {
+                    CLI.runCli(*mutableArgs.toTypedArray())
+                } catch (e: Exception) {
+                    MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
+                }
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
                     val exitCode = "code:${exitStatus.exitCode}"
@@ -445,7 +445,7 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun createBasicSarif(errorMessage: String): String {
-        val version = OscalCliVersion();
+        val version = OscalCliVersion().getVersion();
         return """
         {
           "${'$'}schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
@@ -474,7 +474,6 @@ class OscalVerticle : CoroutineVerticle() {
     }
     private fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFilePath: String) {
         val fileContent = File(sarifFilePath).readText()
-        File(sarifFilePath).delete()
         ctx.response()
             .setStatusCode(200) // HTTP 200 OK
             .putHeader("Exit-Status", exitStatus.exitCode.toString())
