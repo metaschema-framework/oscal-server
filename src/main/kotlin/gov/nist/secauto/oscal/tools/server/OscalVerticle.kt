@@ -4,6 +4,8 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
+import gov.nist.secauto.metaschema.databind.io.IBoundLoader;
+import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion;
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions;
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +27,6 @@ import io.vertx.kotlin.coroutines.dispatcher
 import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
-import gov.nist.secauto.oscal.tools.server.commands.OscalCommandExecutor
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import java.io.ByteArrayOutputStream
@@ -41,6 +42,7 @@ import java.nio.charset.StandardCharsets
 import io.vertx.kotlin.coroutines.awaitBlocking
 import kotlin.io.path.appendText
 import java.util.concurrent.atomic.AtomicInteger
+import gov.nist.secauto.oscal.tools.cli.core.CLI;
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
@@ -106,7 +108,7 @@ class OscalVerticle : CoroutineVerticle() {
                 val expression = ctx.queryParam("expression").firstOrNull()
                 if (encodedContent != null && expression != null) {
                     val content = processUrl(encodedContent)
-                    val args = mutableListOf("query")
+                    val args = mutableListOf("metaschema metapath eval")
                     args.add("-i")
                     args.add(content)
                     args.add("-e")
@@ -146,7 +148,7 @@ class OscalVerticle : CoroutineVerticle() {
             val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
             
             val result = when {
-                System.getProperty("os.name").toLowerCase().contains("win") -> {
+                System.getProperty("os.name").lowercase().contains("win") -> {
                     // Windows-specific handling
                     if (decodedPath.startsWith("/")) {
                         // Absolute path with drive letter
@@ -191,8 +193,11 @@ class OscalVerticle : CoroutineVerticle() {
                     var command = "validate"
                     encodedModule?.let { module ->
                         if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                            command = "validate-metaschema"
+                            command = "metaschema validate"
+                        }else{
+                            command = "metaschema validate-content"
                         }
+
                     }
 
                     val args = mutableListOf(command, tempFilePath.toString(),"--show-stack-trace")
@@ -254,7 +259,9 @@ class OscalVerticle : CoroutineVerticle() {
                     var command = "validate"
                     encodedModule?.let { module ->
                         if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                            command = "validate-metaschema"
+                            command = "metaschema validate"
+                        }else{
+                            command = "metaschema validate-content"
                         }
                     }
                     val args = mutableListOf(command, content, "--show-stack-trace")
@@ -385,10 +392,7 @@ class OscalVerticle : CoroutineVerticle() {
     private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
         return withContext(vertx.dispatcher()) {
-            awaitBlocking {
-
-                val command = args[0]
-                                
+            awaitBlocking {                                
                 // Create a mutable list from args
                 val mutableArgs = args.toMutableList()
         
@@ -401,23 +405,33 @@ class OscalVerticle : CoroutineVerticle() {
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
                 }
-                if (mutableArgs[0]=="validate"){
+                if (listOf("metaschema metapath eval","validate","metaschema validate").contains(mutableArgs[0])){
                     if(!mutableArgs.contains(("--sarif-include-pass"))){
                         mutableArgs.add("--sarif-include-pass")
                     }
                     mutableArgs.add("-o")    
                 }
-                if (mutableArgs[0] == "query"||mutableArgs[0]=="validate-metaschema"){
-                    mutableArgs.add("-o")    
-                }
+
                 mutableArgs.add(sarifFilePath)
 
-                val oscalCommandExecutor = OscalCommandExecutor(command, mutableArgs)
-                val exitStatus = oscalCommandExecutor.execute()
-        
+                logger.info(mutableArgs.joinToString(" "))
+                val exitStatus = CLI.runCli(*mutableArgs.toTypedArray())
                 // Check if SARIF file was created
                 if (!File(sarifFilePath).exists()) {
-                    val basicSarif = createBasicSarif("code:"+exitStatus.exitCode.toString())
+                    val exitCode = "code:${exitStatus.exitCode}"
+                    val basicSarif = when (exitStatus) {
+                        is MessageExitStatus -> {
+                            // Always create SARIF, but include message if available
+                            val message = exitStatus.message
+                            if (!message.isNullOrEmpty()) {
+                                createBasicSarif(exitCode+" "+ message)
+                            } else {
+                                createBasicSarif(exitCode)
+                            }
+                        }
+                        else -> createBasicSarif(exitCode)
+                    }
+                    
                     File(sarifFilePath).writeText(basicSarif)
                 }
                 activeWorkers.decrementAndGet()
@@ -427,6 +441,7 @@ class OscalVerticle : CoroutineVerticle() {
     }
 
     private fun createBasicSarif(errorMessage: String): String {
+        val version = OscalCliVersion();
         return """
         {
           "${'$'}schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
@@ -435,9 +450,9 @@ class OscalVerticle : CoroutineVerticle() {
             {
               "tool": {
                 "driver": {
-                  "name": "OSCAL Tool",
-                  "informationUri": "https://pages.nist.gov/OSCAL/",
-                  "version": "1.0.0"
+                  "name": "OSCAL Server",
+                  "informationUri": "https://github.com/metaschema-framework/oscal-server",
+                  "version": "$version"
                 }
               },
               "results": [
@@ -492,7 +507,7 @@ class OscalVerticle : CoroutineVerticle() {
                 tempFile.appendText(body)
                 logger.info("Wrote body content to temporary file")
 
-                val args = mutableListOf("query")
+                val args = mutableListOf("metaschema metapath eval")
                 args.add("-i")
                 args.add(processUrl(tempFilePath.toString()))
                 args.add("-e")
