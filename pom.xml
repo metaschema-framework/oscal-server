@@ -20,7 +20,7 @@
 
     <vertx.version>4.5.10</vertx.version>
     <oscal-cli.version>2.1.0</oscal-cli.version>
-    <metaschema-framework.version>1.1.0</metaschema-framework.version>
+    <metaschema-framework.version>2.0.1</metaschema-framework.version>
     <liboscal-java.version>4.1.0</liboscal-java.version>
     <log4j.version>2.23.1</log4j.version>
 
