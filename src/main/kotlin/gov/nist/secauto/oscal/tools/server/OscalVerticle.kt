@@ -4,6 +4,7 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
+import gov.nist.secauto.oscal.tools.server.commands.OscalCommandExecutor
 import gov.nist.secauto.metaschema.databind.io.IBoundLoader;
 import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion;
 import io.vertx.core.Vertx
@@ -110,7 +111,7 @@ class OscalVerticle : CoroutineVerticle() {
                 val expression = ctx.queryParam("expression").firstOrNull()
                 if (encodedContent != null && expression != null) {
                     val content = processUrl(encodedContent)
-                    val args = mutableListOf("metaschema metapath eval")
+                    val args = mutableListOf("query")
                     args.add("-i")
                     args.add(content)
                     args.add("-e")
@@ -404,8 +405,8 @@ class OscalVerticle : CoroutineVerticle() {
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
                 }
-                if (listOf("metaschema","validate").contains(mutableArgs[0])){
-                    if(!mutableArgs.contains(("--sarif-include-pass"))){
+                if (listOf("metaschema","validate","query").contains(mutableArgs[0])){
+                    if(!mutableArgs.contains(("--sarif-include-pass"))&&mutableArgs[0]!="query"){
                         mutableArgs.add("--sarif-include-pass")
                     }
                     mutableArgs.add("-o")    
@@ -416,7 +417,13 @@ class OscalVerticle : CoroutineVerticle() {
                 logger.info(mutableArgs.joinToString(" "))
                 
                 val exitStatus = try {
-                    CLI.runCli(*mutableArgs.toTypedArray())
+                    if(mutableArgs[0]=="query"){
+                        logger.info(mutableArgs.joinToString(" "))
+                        val oscalCommandExecutor = OscalCommandExecutor(mutableArgs[0], mutableArgs)
+                        oscalCommandExecutor.executeCommand()
+                    }else{
+                        CLI.runCli(*mutableArgs.toTypedArray())
+                    }
                 } catch (e: Exception) {
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
                 }
@@ -510,7 +517,7 @@ class OscalVerticle : CoroutineVerticle() {
                 tempFile.appendText(body)
                 logger.info("Wrote body content to temporary file")
 
-                val args = mutableListOf("metaschema metapath eval")
+                val args = mutableListOf("query")
                 args.add("-i")
                 args.add(processUrl(tempFilePath.toString()))
                 args.add("-e")
