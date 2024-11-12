@@ -426,7 +426,7 @@ class OscalVerticle : CoroutineVerticle() {
                         logger.info(mutableArgs.joinToString(" "))
                         logger.info("RUNNING CLI")
                         if(mutableArgs[0]=="metaschema"){
-                            gov.nist.secauto.metaschema.cli.CLI.runCli(*mutableArgs.toTypedArray())
+                            gov.nist.secauto.metaschema.cli.CLI.runCli(*mutableArgs.drop(1).toTypedArray())
                         }else{
                             gov.nist.secauto.oscal.tools.cli.core.CLI.runCli(*mutableArgs.toTypedArray())
                         }
