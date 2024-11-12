@@ -45,7 +45,6 @@ import java.nio.charset.StandardCharsets
 import io.vertx.kotlin.coroutines.awaitBlocking
 import kotlin.io.path.appendText
 import java.util.concurrent.atomic.AtomicInteger
-import gov.nist.secauto.oscal.tools.cli.core.CLI;
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
@@ -264,16 +263,17 @@ class OscalVerticle : CoroutineVerticle() {
                         }
                     }
                     args.add(content);
-                    args.add("--show-stack-trace");
                     constraint.forEach { constraint_document ->
                         args.add("-c")
                         args.add(processUrl(constraint_document))
                     }
+                    args.add("--show-stack-trace");
                     flags.forEach { flag ->
                         args.add(flagToParam(flag))
                     }
                     val result = async {
                         try {
+                            logger.info(args.joinToString(" "))
                             executeCommand(args)
                         } catch (e: Exception) {
                             logger.error("Error handling request", e)
@@ -418,11 +418,18 @@ class OscalVerticle : CoroutineVerticle() {
                 
                 val exitStatus = try {
                     if(mutableArgs[0]=="query"){
+                        logger.info("Query activated")
                         logger.info(mutableArgs.joinToString(" "))
                         val oscalCommandExecutor = OscalCommandExecutor(mutableArgs[0], mutableArgs)
                         oscalCommandExecutor.executeCommand()
                     }else{
-                        CLI.runCli(*mutableArgs.toTypedArray())
+                        logger.info(mutableArgs.joinToString(" "))
+                        logger.info("RUNNING CLI")
+                        if(mutableArgs[0]=="metaschema"){
+                            gov.nist.secauto.metaschema.cli.CLI.runCli(*mutableArgs.toTypedArray())
+                        }else{
+                            gov.nist.secauto.oscal.tools.cli.core.CLI.runCli(*mutableArgs.toTypedArray())
+                        }
                     }
                 } catch (e: Exception) {
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
