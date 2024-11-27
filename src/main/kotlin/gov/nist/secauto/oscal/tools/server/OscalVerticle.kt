@@ -4,7 +4,6 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
-import gov.nist.secauto.oscal.tools.server.commands.OscalCommandExecutor
 import gov.nist.secauto.metaschema.databind.io.IBoundLoader;
 import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion;
 import io.vertx.core.Vertx
@@ -109,13 +108,16 @@ class OscalVerticle : CoroutineVerticle() {
                 logger.info("Handling Query request")
                 val encodedContent = ctx.queryParam("document").firstOrNull()
                 val expression = ctx.queryParam("expression").firstOrNull()
-                if (encodedContent != null && expression != null) {
+                val module = ctx.queryParam("module").firstOrNull()
+                if (encodedContent != null && expression != null&&module!=null) {
                     val content = processUrl(encodedContent)
-                    val args = mutableListOf("query")
+                    val args = mutableListOf("metaschema","metapath","eval")
                     args.add("-i")
                     args.add(content)
                     args.add("-e")
                     args.add(expression)
+                    args.add("-m")
+                    args.add(module)
                     val result = async {
                         try {
                             executeCommand(args)
@@ -405,25 +407,19 @@ class OscalVerticle : CoroutineVerticle() {
                 if(mutableArgs.contains(("-o"))){
                     throw Error("Do not specify sarif file")
                 }
-                if (listOf("metaschema","validate","query").contains(mutableArgs[0])){
-                    if(!mutableArgs.contains(("--sarif-include-pass"))&&mutableArgs[0]!="query"){
-                        mutableArgs.add("--sarif-include-pass")
-                    }
+                val isQuery=mutableArgs[1]=="metapath";
+                if (listOf("metaschema","validate").contains(mutableArgs[0])&&!isQuery){
+                    mutableArgs.add("--sarif-include-pass")
                     mutableArgs.add("-o")    
                 }
-
-                mutableArgs.add(sarifFilePath)
+                if(!isQuery){
+                    mutableArgs.add(sarifFilePath)
+                }
 
                 logger.info(mutableArgs.joinToString(" "))
                 
                 val exitStatus = try {
-                    if(mutableArgs[0]=="query"){
-                        logger.info(mutableArgs.joinToString(" "))
-                        val oscalCommandExecutor = OscalCommandExecutor(mutableArgs[0], mutableArgs)
-                        oscalCommandExecutor.executeCommand()
-                    }else{
                         CLI.runCli(*mutableArgs.toTypedArray())
-                    }
                 } catch (e: Exception) {
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
                 }
@@ -506,8 +502,9 @@ class OscalVerticle : CoroutineVerticle() {
             logger.info("Handling Query file upload request")
             val body = ctx.body().asString()
             val expression = ctx.queryParam("expression").firstOrNull()
+            val module = ctx.queryParam("module").firstOrNull()
 
-            if (body.isNotEmpty() && expression != null) {
+            if (body.isNotEmpty() && expression != null&&module!=null) {
                 // Create a temporary file
                 val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
                 val tempFilePath = tempFile.toAbsolutePath()
@@ -517,11 +514,13 @@ class OscalVerticle : CoroutineVerticle() {
                 tempFile.appendText(body)
                 logger.info("Wrote body content to temporary file")
 
-                val args = mutableListOf("query")
+                val args = mutableListOf("metaschema","metapath","eval")
                 args.add("-i")
                 args.add(processUrl(tempFilePath.toString()))
                 args.add("-e")
                 args.add(expression)
+                args.add("-m")
+                args.add(module)
 
                 val result = async {
                     try {
