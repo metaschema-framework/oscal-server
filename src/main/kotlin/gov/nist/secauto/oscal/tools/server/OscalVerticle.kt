@@ -109,7 +109,7 @@ class OscalVerticle : CoroutineVerticle() {
                 val encodedContent = ctx.queryParam("document").firstOrNull()
                 val expression = ctx.queryParam("expression").firstOrNull()
                 val module = ctx.queryParam("module").firstOrNull()
-                if (encodedContent != null && expression != null&&module!=null) {
+                if (encodedContent != null && expression != null && module != null) {
                     val content = processUrl(encodedContent)
                     val args = mutableListOf("metaschema","metapath","eval")
                     args.add("-i")
