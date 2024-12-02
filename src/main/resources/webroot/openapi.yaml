@@ -47,7 +47,6 @@ paths:
           required: false
           schema:
             type: string
-            enum: [http://csrc.nist.gov/ns/oscal/metaschema/1.0,http://csrc.nist.gov/ns/oscal/1.0]
           description: URI or NS of metaschema module
         - in: query
           name: flags
@@ -86,7 +85,6 @@ paths:
           required: false
           schema:
             type: string
-            enum: [http://csrc.nist.gov/ns/oscal/metaschema/1.0,http://csrc.nist.gov/ns/oscal/1.0]
           description: URI or NS of metaschema module
         - in: query
           name: flags
@@ -238,6 +236,13 @@ paths:
             type: string
           description: metapath expression to query oscal document
           example: //user
+        - in: query
+          name: module
+          required: true
+          schema:
+            type: string
+          description: metaschema module
+          example: https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml
       responses:
         '200':
           $ref: '#/components/responses/OscalResponse'
@@ -256,6 +261,13 @@ paths:
             type: string
           description: metapath expression to query oscal document
           example: //user
+        - in: query
+          name: module
+          required: true
+          schema:
+            type: string
+          description: metaschema module
+          example: https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml
       requestBody:
         required: true
         content:
