@@ -49,21 +49,18 @@ import gov.nist.secauto.oscal.tools.cli.core.CLI;
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
     private lateinit var oscalDir: Path
+    private lateinit var serverDir: Path
+    private val allowedDirs = mutableListOf<Path>()
+
     private val activeWorkers = AtomicInteger(0)
 
     override suspend fun start() {
         VertxOptions().setEventLoopPoolSize(8)
         initializeOscalDirectory()
+        serverDir = Paths.get("").toAbsolutePath()
+        initializeAllowedDirectories()
         val router = createRouter()
         startHttpServer(router)
-    }
-    private fun initializeOscalDirectory() {
-        val homeDir = System.getProperty("user.home")
-        oscalDir = Paths.get(homeDir, ".oscal")
-        if (!Files.exists(oscalDir)) {
-            Files.createDirectory(oscalDir)
-        }
-        logger.info("OSCAL directory initialized at: $oscalDir")
     }
 
     private suspend fun createRouter(): Router {
@@ -140,86 +137,162 @@ class OscalVerticle : CoroutineVerticle() {
 
     
 
-    private fun processUrl(url: String): String {
-        if (!url.startsWith("file://")) {
-            return url
+    private fun initializeOscalDirectory() {
+        val homeDir = System.getProperty("user.home")
+        oscalDir = Paths.get(homeDir, ".oscal")
+        if (!Files.exists(oscalDir)) {
+            Files.createDirectory(oscalDir)
+        }
+        logger.info("OSCAL directory initialized at: $oscalDir")
+    }
+
+    private fun initializeAllowedDirectories() {
+        // Always allow ~/.oscal
+        allowedDirs.add(oscalDir)
+
+        val envPath = System.getenv("OSCAL_SERVER_PATH")
+        if (!envPath.isNullOrBlank()) {
+            // Split by colon
+            val paths = envPath.split(":")
+            for (dir in paths) {
+                val expandedDir = expandHomeDirectory(dir.trim())
+                val path = Paths.get(expandedDir).normalize().toAbsolutePath()
+                if (Files.exists(path) && Files.isDirectory(path)) {
+                    allowedDirs.add(path)
+                    logger.info("Added allowed directory from OSCAL_SERVER_PATH: $path")
+                } else {
+                    logger.warn("Skipping invalid directory from OSCAL_SERVER_PATH: $expandedDir")
+                }
+            }
         }
 
-        try {
-            // Remove the "file://" prefix and decode the URL
-            val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
-            
-            val result = when {
-                System.getProperty("os.name").lowercase().contains("win") -> {
-                    // Windows-specific handling
-                    if (decodedPath.startsWith("/")) {
-                        // Absolute path with drive letter
-                        decodedPath.substring(1).replace('/', '\\')
-                    } else {
-                        // UNC path or relative path
-                        decodedPath.replace('/', '\\')
-                    }
-                }
-                else -> {
-                    // Unix-like systems
-                    decodedPath
-                }
-            }            
-            return result
-        } catch (e: Exception) {
-            return url
+        logger.info("Allowed directories: ${allowedDirs.joinToString(", ")}")
+    }
+
+    private fun expandHomeDirectory(path: String): String {
+        return if (path.startsWith("~")) {
+            val home = System.getProperty("user.home")
+            home + path.substring(1)
+        } else {
+            path
         }
     }
-    
+
+    private fun processUrl(url: String): String {
+        return when {
+            url.startsWith("https://") -> {
+                // HTTPS URLs are allowed as-is
+                url
+            }
+            url.startsWith("file://") -> {
+                processFileUrl(url)
+            }
+            else -> {
+                // Non-https and non-file URLs are not allowed
+                logger.error("Non-https URL and non-file URL encountered: $url")
+                throw IllegalArgumentException("Only https:// URLs or allowed local files are permitted.")
+            }
+        }
+    }
+
+    private fun processFileUrl(url: String): String {
+        val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
+        val normalizedPath: Path = if (System.getProperty("os.name").lowercase().contains("win")) {
+            // Windows-specific handling
+            val winPath = if (decodedPath.startsWith("/")) {
+                decodedPath.substring(1).replace('/', '\\')
+            } else {
+                decodedPath.replace('/', '\\')
+            }
+            Paths.get(winPath).normalize().toAbsolutePath()
+        } else {
+            Paths.get(decodedPath).normalize().toAbsolutePath()
+        }
+
+        // Check if the file is under any of the allowed directories
+        val isAllowed = allowedDirs.any { allowedDir -> normalizedPath.startsWith(allowedDir) }
+        if (isAllowed) {
+            return normalizedPath.toString()
+        } else {
+            logger.error("Attempted access to file outside allowed directories: $normalizedPath")
+            throw IllegalArgumentException("Access denied: File is not in an allowed directory.")
+        }
+    }
+
+    private fun unescapeXmlString(xml: String): String {
+        return xml.replace("\\\"", "\"")  // Replace escaped quotes with regular quotes
+                 .replace("\\'", "'")      // Replace escaped single quotes
+                 .replace("\\n", "\n")     // Replace escaped newlines
+                 .replace("\\r", "\r")     // Replace escaped carriage returns
+                 .replace("\\t", "\t")     // Replace escaped tabs
+    }
     
     private fun handleValidateFileUpload(ctx: RoutingContext) {
         logger.info("Handling file upload request!")
         launch {
             try {
                 logger.info("Handling file upload request in the background")
-                val body = ctx.body().asString()
+                var body = ctx.body().asString()
+                    // Remove surrounding quotes if they exist
+                if (body.startsWith("\"") && body.endsWith("\"")) {
+                    body = body.substring(1, body.length - 1)
+                }
+                if (body.trim().startsWith("<")) {
+                    body = unescapeXmlString(body)
+                }
                 logger.info("Received body: $body")
                 val flags = ctx.queryParam("flags")
                 val encodedModule = ctx.queryParam("module").firstOrNull()
-
+                
+                // Get the format parameter if provided
+                val formatParam = ctx.queryParam("format").firstOrNull()?.lowercase()
+                val fileExtension = when (formatParam) {
+                    "json" -> ".json"
+                    "xml" -> ".xml"
+                    "yaml" -> ".yaml"
+                    else -> ".tmp"
+                }
+    
                 if (body.isNotEmpty()) {
-                    // Create a temporary file
-                    val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
-
+                    // Create a temporary file with the chosen extension
+                    val tempFile = Files.createTempFile(oscalDir, "upload", fileExtension)
                     val tempFilePath = tempFile.toAbsolutePath()
                     logger.info("Created temporary file: $tempFilePath")
-                    val args = mutableListOf("validate");
+    
+                    // Prepare CLI arguments
+                    val args = mutableListOf("validate")
                     encodedModule?.let { module ->
                         if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                            args[0]="metaschema"
+                            args[0] = "metaschema"
                             args.add("validate")
-                        }else{
-                            args[0]="metaschema"
+                        } else {
+                            args[0] = "metaschema"
                             args.add("validate-content")
                         }
                     }
-                    args.add(tempFilePath.toString());
-                    args.add("--show-stack-trace");
+                    args.add(tempFilePath.toString())
+                    args.add("--show-stack-trace")
                     flags.forEach { flag ->
                         args.add(flagToParam(flag))
-                    }    
+                    }
+    
                     // Write the body content to the temporary file
                     tempFile.appendText(body)
                     logger.info("Wrote body content to temporary file")
     
-                    // Use async for parallelism
+                    // Use async for parallel execution
                     val result = async {
                         executeCommand(args)
-                    }.await() // Wait for the result of the async execution
-                    
+                    }.await()
+    
                     logger.info("Validation result: ${result.second}")
-                    if(result.first.exitCode.toString()==="OK"){
+    
+                    if (result.first.exitCode.toString() == "OK") {
                         sendSuccessResponse(ctx, result.first, result.second)
-                    }else{
+                    } else {
                         sendErrorResponse(ctx, 400, result.first.exitCode.toString())
                     }
-                    
-                    // Clean up the temporary file
+                    // Temporary file may be cleaned up later if desired
                 } else {
                     sendErrorResponse(ctx, 400, "No content in request body")
                 }
