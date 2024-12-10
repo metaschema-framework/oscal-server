@@ -1,0 +1,230 @@
+plan-of-action-and-milestones:
+  uuid: 8c1ee2a6-bd14-4f77-b2f7-3d2bc0aaa55e
+  metadata:
+    title: "Oscal Server Software Development System POA&M"
+    last-modified: "2024-10-24T13:57:28.355446-04:00"
+    version: "1.0"
+    oscal-version: 1.1.2
+  import-ssp:
+    href: ssp.oscal.yaml
+  system-id:
+    identifier-type: http://ietf.org/rfc/rfc4122
+    id: 8c1ee2a6-bd14-4f77-b2f7-3d2bc0aaa55e
+  observations:
+    - uuid: 77777777-0000-4000-9000-100000000012
+      title: "Source Control System Security Requirements Assessment"
+      description: "Examine implementation of security requirements documentation and maintenance"
+      methods:
+        - EXAMINE
+      types:
+        - finding
+      subjects:
+        - subject-uuid: 55555555-0000-4000-9000-100000000005
+          type: component
+      collected: "2024-10-24T12:00:00-04:00"
+      remarks: "Security requirements documentation is not currently maintained in a centralized repository. Quarterly reviews are not being conducted systematically."
+    
+    - uuid: 77777777-0000-4000-9000-100000000013
+      title: "Development Team Role Management Assessment"
+      description: "Examine implementation of role management and security training program"
+      methods:
+        - EXAMINE
+      types:
+        - finding
+      subjects:
+        - subject-uuid: 55555555-0000-4000-9000-100000000005
+          type: component
+      collected: "2024-10-24T12:00:00-04:00"
+      remarks: "RACI matrix is incomplete and security training program is not fully implemented in the learning management system."
+
+    - uuid: 77777777-0000-4000-9000-100000000022
+      title: "Unrestricted File System Access Assessment"
+      description: "Examine server file system access controls and potential security vulnerabilities"
+      methods:
+        - EXAMINE
+        - TEST
+      types:
+        - finding
+      subjects:
+        - subject-uuid: 66666666-0000-4000-9000-100000000006
+          type: component
+      collected: "2024-10-24T12:00:00-04:00"
+      remarks: "Server has unrestricted access to entire file system. No environment variable constraints are in place to limit file access to specific directories."
+
+  risks:
+    - uuid: 77777777-0000-4000-9000-100000000014
+      title: "RISK-1: Inadequate Security Requirements Management"
+      description: "Security requirements are not properly documented and maintained, increasing risk of security gaps"
+      statement: >-
+        Lack of centralized security requirements documentation and systematic review
+        process could lead to inconsistent security implementations and missed
+        vulnerabilities. This poses significant risk to the development environment
+        and resulting software products.
+      status: open
+      characterizations:
+        - origin:
+            actors:
+              - type: party
+                actor-uuid: 11111111-0000-4000-9000-100000000001
+          facets:
+            - name: likelihood
+              system: https://fedramp.gov
+              value: moderate
+            - name: impact
+              system: https://fedramp.gov
+              value: moderate
+      deadline: "2025-03-31T00:00:00-04:00"
+      remediations:
+        - uuid: 77777777-0000-4000-9000-100000000015
+          lifecycle: planned
+          title: "Security Requirements Documentation Implementation"
+          description: >-
+            Implement centralized security requirements documentation system and
+            establish quarterly review process. Assign dedicated security team
+            members for maintenance.
+          props:
+            - name: type
+              value: mitigate
+          tasks:
+            - uuid: 77777777-0000-4000-9000-100000000016
+              type: milestone
+              title: "Initial Documentation System Implementation"
+              description: "Complete setup of centralized documentation system and initial content creation"
+              timing:
+                within-date-range:
+                  start: "2024-11-01T00:00:00-04:00"
+                  end: "2024-12-31T00:00:00-04:00"
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000012
+
+    - uuid: 77777777-0000-4000-9000-100000000017
+      title: "RISK-2: Incomplete Role Management Implementation"
+      description: "Role management and security training program not fully implemented"
+      statement: >-
+        Incomplete RACI matrix and security training program implementation could
+        lead to unclear responsibilities and insufficient security awareness among
+        development team members.
+      status: open
+      characterizations:
+        - origin:
+            actors:
+              - type: party
+                actor-uuid: 11111111-0000-4000-9000-100000000001
+          facets:
+            - name: likelihood
+              system: https://fedramp.gov
+              value: moderate
+            - name: impact
+              system: https://fedramp.gov
+              value: moderate
+      deadline: "2025-01-31T00:00:00-04:00"
+      remediations:
+        - uuid: 77777777-0000-4000-9000-100000000018
+          lifecycle: planned
+          title: "Role Management Program Implementation"
+          description: >-
+            Complete RACI matrix implementation and establish comprehensive
+            security training program in learning management system.
+          props:
+            - name: type
+              value: mitigate
+          tasks:
+            - uuid: 77777777-0000-4000-9000-100000000019
+              type: milestone
+              title: "RACI Matrix and Training Program Completion"
+              description: "Finalize RACI matrix and launch security training program"
+              timing:
+                within-date-range:
+                  start: "2024-11-01T00:00:00-04:00"
+                  end: "2025-01-31T00:00:00-04:00"
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000013
+
+    - uuid: 77777777-0000-4000-9000-100000000023
+      title: "RISK-3: Unrestricted File System Access"
+      description: "Server has unrestricted access to entire file system without proper controls"
+      statement: >-
+        Unrestricted file system access could allow unauthorized access to sensitive
+        system files and data outside the intended scope of the application. This
+        poses a significant security risk through potential data exposure or system
+        manipulation.
+      status: open
+      characterizations:
+        - origin:
+            actors:
+              - type: party
+                actor-uuid: 11111111-0000-4000-9000-100000000001
+          facets:
+            - name: likelihood
+              system: https://fedramp.gov
+              value: high
+            - name: impact
+              system: https://fedramp.gov
+              value: high
+      deadline: "2024-12-15T00:00:00-04:00"
+      remediations:
+        - uuid: 77777777-0000-4000-9000-100000000024
+          lifecycle: planned
+          title: "Implement File System Access Controls"
+          description: >-
+            Implement OSCAL_SERVER_PATH environment variable to restrict server
+            file system access to specific authorized directories only.
+          props:
+            - name: type
+              value: mitigate
+          tasks:
+            - uuid: 77777777-0000-4000-9000-100000000025
+              type: milestone
+              title: "File System Access Control Implementation"
+              description: "Implement and test OSCAL_SERVER_PATH environment variable controls"
+              timing:
+                within-date-range:
+                  start: "2024-11-01T00:00:00-04:00"
+                  end: "2024-12-15T00:00:00-04:00"
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000022
+
+  poam-items:
+    - uuid: 77777777-0000-4000-9000-100000000020
+      title: "Implement Security Requirements Management System"
+      description: >-
+        Implementation of centralized security requirements documentation system
+        and establishment of quarterly review process requires allocation of
+        security team resources and development of new processes.
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000012
+      related-risks:
+        - risk-uuid: 77777777-0000-4000-9000-100000000014
+
+    - uuid: 77777777-0000-4000-9000-100000000021
+      title: "Complete Role Management Implementation"
+      description: >-
+        Completion of RACI matrix and security training program implementation
+        requires coordination between development team and security team, as well
+        as configuration of learning management system.
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000013
+      related-risks:
+        - risk-uuid: 77777777-0000-4000-9000-100000000017
+
+    - uuid: 77777777-0000-4000-9000-100000000026
+      title: "Implement File System Access Restrictions"
+      description: >-
+        Implementation of OSCAL_SERVER_PATH environment variable to restrict
+        server file system access to authorized directories only. This requires
+        configuration changes, testing, and validation of access controls.
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000022
+      related-risks:
+        - risk-uuid: 77777777-0000-4000-9000-100000000023
+  back-matter:
+    resources:
+      - uuid: 77777777-0000-4000-9900-100000000000
+        title: "System POA&M"
+        description: "Plan of Action and Milestones for the System"
+        rlinks:
+          - href: "poam.oscal.yaml"
+        props:
+          - name: type
+            value: plan
+            class: poam

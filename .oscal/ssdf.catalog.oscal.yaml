@@ -171,7 +171,7 @@ catalog:
                   value: PO.5.1
               prose: >-
                 Separate and protect each environment involved in software
-                developme
+                development
             - name: statement
               props:
                 - name: label
