@@ -391,7 +391,7 @@ class OscalVerticle : CoroutineVerticle() {
     
                     logger.info("Validation result: ${result.second}")
     
-                    if (result.first.exitCode.toString() == "OK") {
+                    if (result.first.exitCode == ExitCode.OK) {
                         sendSuccessResponse(ctx, result.first, result.second)
                     } else {
                         sendErrorResponse(ctx, 400, result.first.exitCode.toString())
