@@ -110,7 +110,7 @@ class OscalVerticle : CoroutineVerticle() {
 
         val envPath = System.getenv("OSCAL_SERVER_PATH")
         if (!envPath.isNullOrBlank()) {
-            val paths = envPath.split(":")
+            val paths = envPath.split(File.pathSeparator)
             for (dir in paths) {
                 try {
                     val expandedDir = expandHomeDirectory(dir.trim())
