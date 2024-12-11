@@ -4,6 +4,7 @@
  */
 
 package gov.nist.secauto.oscal.tools.server
+import java.nio.file.attribute.PosixFilePermission
 import gov.nist.secauto.metaschema.databind.io.IBoundLoader;
 import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion;
 import io.vertx.core.Vertx
@@ -54,13 +55,189 @@ class OscalVerticle : CoroutineVerticle() {
 
     private val activeWorkers = AtomicInteger(0)
 
+    
     override suspend fun start() {
-        VertxOptions().setEventLoopPoolSize(8)
+        try {
+            VertxOptions().setEventLoopPoolSize(8)
+            validateAndInitializeDirectories()
+            serverDir = Paths.get("").toAbsolutePath()
+            val router = createRouter()
+            startHttpServer(router)
+        } catch (e: SecurityException) {
+            logger.error("Critical security configuration error: ${e.message}")
+            throw e // Fail fast on security configuration issues
+        }
+    }
+
+    private fun validateAndInitializeDirectories() {
+        // Initialize OSCAL directory with security checks
         initializeOscalDirectory()
-        serverDir = Paths.get("").toAbsolutePath()
+        
+        // Initialize and validate allowed directories
         initializeAllowedDirectories()
-        val router = createRouter()
-        startHttpServer(router)
+        
+        // Verify all directories are accessible and have proper permissions
+        verifyDirectoryPermissions()
+    }
+
+    private fun initializeOscalDirectory() {
+        val homeDir = System.getProperty("user.home")
+        oscalDir = Paths.get(homeDir, ".oscal").normalize().toAbsolutePath()
+        
+        if (!Files.exists(oscalDir)) {
+            try {
+                // Create directory with restricted permissions (owner read/write/execute only)
+                Files.createDirectory(oscalDir)
+                restrictDirectoryPermissions(oscalDir)
+            } catch (e: Exception) {
+                throw SecurityException("Failed to create secure OSCAL directory: ${e.message}")
+            }
+        }
+        
+        if (!Files.isDirectory(oscalDir)) {
+            throw SecurityException("OSCAL path exists but is not a directory: $oscalDir")
+        }
+        
+        logger.info("OSCAL directory initialized at: $oscalDir")
+    }
+
+    private fun initializeAllowedDirectories() {
+        // Clear existing allowed directories
+        allowedDirs.clear()
+        
+        // Always add ~/.oscal as the first allowed directory
+        allowedDirs.add(oscalDir)
+
+        val envPath = System.getenv("OSCAL_SERVER_PATH")
+        if (!envPath.isNullOrBlank()) {
+            val paths = envPath.split(":")
+            for (dir in paths) {
+                try {
+                    val expandedDir = expandHomeDirectory(dir.trim())
+                    val path = Paths.get(expandedDir).normalize().toAbsolutePath()
+                    
+                    // Validate the directory
+                    validateDirectory(path)
+                    
+                    // Add to allowed directories if validation passes
+                    allowedDirs.add(path)
+                    logger.info("Added allowed directory from OSCAL_SERVER_PATH: $path")
+                } catch (e: Exception) {
+                    logger.error("Invalid directory in OSCAL_SERVER_PATH: $dir - ${e.message}")
+                    throw SecurityException("Invalid directory configuration: $dir - ${e.message}")
+                }
+            }
+        } else {
+            logger.warn("OSCAL_SERVER_PATH environment variable not set - only ~/.oscal will be accessible")
+        }
+
+        if (allowedDirs.isEmpty()) {
+            throw SecurityException("No valid directories configured for access")
+        }
+
+        logger.info("Initialized allowed directories: ${allowedDirs.joinToString(", ")}")
+    }
+
+    private fun validateDirectory(path: Path) {
+        when {
+            !Files.exists(path) -> 
+                throw SecurityException("Directory does not exist: $path")
+            !Files.isDirectory(path) -> 
+                throw SecurityException("Path is not a directory: $path")
+            !Files.isReadable(path) -> 
+                throw SecurityException("Directory is not readable: $path")
+            path.startsWith(oscalDir) && !path.equals(oscalDir) -> 
+                throw SecurityException("Security violation: Subdirectories of ~/.oscal are not allowed")
+        }
+    }
+
+    private fun verifyDirectoryPermissions() {
+        allowedDirs.forEach { dir ->
+            try {
+                // Verify basic access permissions
+                require(Files.isReadable(dir)) { "Directory not readable: $dir" }
+                require(Files.isExecutable(dir)) { "Directory not executable: $dir" }
+                
+                // Check for suspicious symlinks
+                if (Files.isSymbolicLink(dir)) {
+                    val target = Files.readSymbolicLink(dir)
+                    val resolvedTarget = dir.resolveSibling(target).normalize()
+                    require(allowedDirs.any { allowed -> resolvedTarget.startsWith(allowed) }) {
+                        "Symbolic link points outside allowed directories: $dir -> $resolvedTarget"
+                    }
+                }
+            } catch (e: Exception) {
+                throw SecurityException("Directory permission verification failed for $dir: ${e.message}")
+            }
+        }
+    }
+
+    private fun restrictDirectoryPermissions(path: Path) {
+        try {
+            // Set directory permissions to owner read/write/execute only
+            val perms = Files.getPosixFilePermissions(path)
+            perms.removeAll(setOf(
+                PosixFilePermission.GROUP_READ,
+                PosixFilePermission.GROUP_WRITE,
+                PosixFilePermission.GROUP_EXECUTE,
+                PosixFilePermission.OTHERS_READ,
+                PosixFilePermission.OTHERS_WRITE,
+                PosixFilePermission.OTHERS_EXECUTE
+            ))
+            Files.setPosixFilePermissions(path, perms)
+        } catch (e: Exception) {
+            logger.warn("Failed to restrict directory permissions: ${e.message}")
+            // Continue execution but log the warning
+        }
+    }
+
+    private fun processUrl(url: String): String {
+        return when {
+            url.startsWith("https://") -> {
+                // HTTPS URLs are allowed as-is
+                url
+            }
+            url.startsWith("file://") -> {
+                processFileUrl(url)
+            }
+            else -> {
+                logger.error("Invalid URL scheme: $url")
+                throw SecurityException("Only https:// URLs or allowed local files are permitted.")
+            }
+        }
+    }
+
+    private fun processFileUrl(url: String): String {
+        try {
+            val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
+            val normalizedPath = if (System.getProperty("os.name").lowercase().contains("win")) {
+                // Windows-specific handling
+                val winPath = if (decodedPath.startsWith("/")) {
+                    decodedPath.substring(1).replace('/', '\\')
+                } else {
+                    decodedPath.replace('/', '\\')
+                }
+                Paths.get(winPath).normalize().toAbsolutePath()
+            } else {
+                Paths.get(decodedPath).normalize().toAbsolutePath()
+            }
+
+            // Check for directory traversal attempts
+            val canonicalPath = normalizedPath.toFile().canonicalPath
+            if (canonicalPath != normalizedPath.toString()) {
+                throw SecurityException("Potential directory traversal detected")
+            }
+
+            // Verify path is under allowed directories
+            if (!allowedDirs.any { allowedDir -> normalizedPath.startsWith(allowedDir) }) {
+                throw SecurityException("Access denied: File is not in an allowed directory: $normalizedPath")
+            }
+
+            return normalizedPath.toString()
+        } catch (e: Exception) {
+            logger.error("Error processing file URL: $url", e)
+            throw SecurityException("Invalid file URL: ${e.message}")
+        }
     }
 
     private suspend fun createRouter(): Router {
@@ -135,40 +312,6 @@ class OscalVerticle : CoroutineVerticle() {
         }
     }
 
-    
-
-    private fun initializeOscalDirectory() {
-        val homeDir = System.getProperty("user.home")
-        oscalDir = Paths.get(homeDir, ".oscal")
-        if (!Files.exists(oscalDir)) {
-            Files.createDirectory(oscalDir)
-        }
-        logger.info("OSCAL directory initialized at: $oscalDir")
-    }
-
-    private fun initializeAllowedDirectories() {
-        // Always allow ~/.oscal
-        allowedDirs.add(oscalDir)
-
-        val envPath = System.getenv("OSCAL_SERVER_PATH")
-        if (!envPath.isNullOrBlank()) {
-            // Split by colon
-            val paths = envPath.split(":")
-            for (dir in paths) {
-                val expandedDir = expandHomeDirectory(dir.trim())
-                val path = Paths.get(expandedDir).normalize().toAbsolutePath()
-                if (Files.exists(path) && Files.isDirectory(path)) {
-                    allowedDirs.add(path)
-                    logger.info("Added allowed directory from OSCAL_SERVER_PATH: $path")
-                } else {
-                    logger.warn("Skipping invalid directory from OSCAL_SERVER_PATH: $expandedDir")
-                }
-            }
-        }
-
-        logger.info("Allowed directories: ${allowedDirs.joinToString(", ")}")
-    }
-
     private fun expandHomeDirectory(path: String): String {
         return if (path.startsWith("~")) {
             val home = System.getProperty("user.home")
@@ -178,46 +321,7 @@ class OscalVerticle : CoroutineVerticle() {
         }
     }
 
-    private fun processUrl(url: String): String {
-        return when {
-            url.startsWith("https://") -> {
-                // HTTPS URLs are allowed as-is
-                url
-            }
-            url.startsWith("file://") -> {
-                processFileUrl(url)
-            }
-            else -> {
-                // Non-https and non-file URLs are not allowed
-                logger.error("Non-https URL and non-file URL encountered: $url")
-                throw IllegalArgumentException("Only https:// URLs or allowed local files are permitted.")
-            }
-        }
-    }
-
-    private fun processFileUrl(url: String): String {
-        val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
-        val normalizedPath: Path = if (System.getProperty("os.name").lowercase().contains("win")) {
-            // Windows-specific handling
-            val winPath = if (decodedPath.startsWith("/")) {
-                decodedPath.substring(1).replace('/', '\\')
-            } else {
-                decodedPath.replace('/', '\\')
-            }
-            Paths.get(winPath).normalize().toAbsolutePath()
-        } else {
-            Paths.get(decodedPath).normalize().toAbsolutePath()
-        }
-
-        // Check if the file is under any of the allowed directories
-        val isAllowed = allowedDirs.any { allowedDir -> normalizedPath.startsWith(allowedDir) }
-        if (isAllowed) {
-            return normalizedPath.toString()
-        } else {
-            logger.error("Attempted access to file outside allowed directories: $normalizedPath")
-            throw IllegalArgumentException("Access denied: File is not in an allowed directory.")
-        }
-    }
+    
 
     private fun unescapeXmlString(xml: String): String {
         return xml.replace("\\\"", "\"")  // Replace escaped quotes with regular quotes

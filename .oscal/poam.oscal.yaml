@@ -148,7 +148,7 @@ plan-of-action-and-milestones:
         system files and data outside the intended scope of the application. This
         poses a significant security risk through potential data exposure or system
         manipulation.
-      status: open
+      status: closed
       characterizations:
         - origin:
             actors:
@@ -164,7 +164,7 @@ plan-of-action-and-milestones:
       deadline: "2024-12-15T00:00:00-04:00"
       remediations:
         - uuid: 77777777-0000-4000-9000-100000000024
-          lifecycle: planned
+          lifecycle: completed
           title: "Implement File System Access Controls"
           description: >-
             Implement OSCAL_SERVER_PATH environment variable to restrict server
@@ -176,7 +176,11 @@ plan-of-action-and-milestones:
             - uuid: 77777777-0000-4000-9000-100000000025
               type: milestone
               title: "File System Access Control Implementation"
-              description: "Implement and test OSCAL_SERVER_PATH environment variable controls"
+              description: >-
+                Implemented and tested OSCAL_SERVER_PATH environment variable controls.
+                Added validation of allowed directories, path canonicalization,
+                protection against directory traversal, proper permission management,
+                and comprehensive security logging.
               timing:
                 within-date-range:
                   start: "2024-11-01T00:00:00-04:00"
