@@ -74,6 +74,9 @@ plan-of-action-and-milestones:
         process could lead to inconsistent security implementations and missed
         vulnerabilities. This poses significant risk to the development environment
         and resulting software products.
+      props:
+         - name: label
+            value: risk-1
       status: open
       characterizations:
         - origin:
