@@ -4,16 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1592dce9-8f09-4274-8c20-f8bd3d95f76e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/dependency-reduced-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/dependency-reduced-pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/OscalVerticle.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/OscalVerticle.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/commands/OscalCommandExecutor.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/commands/OscalQueryCommand.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/core/JsonItemWriter.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/log4j2.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/log4j2.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/webroot/openapi.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/webroot/openapi.yaml" afterDir="false" />
-    </list>
+    <list default="true" id="1592dce9-8f09-4274-8c20-f8bd3d95f76e" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -48,17 +39,6 @@
   }
 }</component>
   <component name="RunManager">
-    <configuration default="true" type="JetRunConfigurationType">
-      <module name="server" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
-      <module name="server" />
-      <option name="filePath" />
-      <method v="2" />
-    </configuration>
     <configuration name="server" type="MavenRunConfiguration" factoryName="Maven" nameIsGenerated="true">
       <MavenSettings>
         <option name="myGeneralSettings" />
@@ -121,6 +101,7 @@
       <updated>1732645292337</updated>
       <workItem from="1732645293851" duration="862000" />
       <workItem from="1732646192483" duration="1981000" />
+      <workItem from="1733152009507" duration="306000" />
     </task>
     <servers />
   </component>

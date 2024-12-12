@@ -1,0 +1,40 @@
+graph TD
+    Client[Web Client]
+    Router[Router/API Gateway]
+    VertxServer[Vertx HTTP Server\nPort 8888\nLocalhost Only]
+    FileSystem[Local File System]
+    OscalCLI[OSCAL CLI]
+    HomeDir[User Home Directory]
+    TempFiles[Temporary Files]
+    
+    subgraph "OSCAL Server"
+        Router --> |Route Requests| Operations
+        
+        subgraph "Operations"
+            Validate[Validate]
+            Convert[Convert]
+            Resolve[Resolve Profile]
+            Query[Query/MetaPath]
+            Health[Health Check]
+        end
+        
+        subgraph "Storage"
+            FileSystem --> |Read/Write| HomeDir
+            HomeDir --> |Contains| OscalDir[~/.oscal Directory]
+            FileSystem --> |Create/Delete| TempFiles
+        end
+    end
+    
+    Client -->|HTTP Requests\nGET/POST| VertxServer
+    VertxServer --> |Forward| Router
+    
+    Operations --> |Execute| OscalCLI
+    OscalCLI --> |Read Input| FileSystem
+    OscalCLI --> |Write Output| FileSystem
+    
+    classDef secure fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef restricted fill:#ff9,stroke:#333,stroke-width:2px;
+    
+    class VertxServer restricted;
+    class OscalDir secure;
+    class TempFiles restricted;

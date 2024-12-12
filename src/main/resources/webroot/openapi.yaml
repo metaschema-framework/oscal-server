@@ -87,6 +87,14 @@ paths:
             type: string
           description: URI or NS of metaschema module
         - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+        - in: query
           name: flags
           required: false
           schema:
