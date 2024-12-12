@@ -118,6 +118,9 @@ plan-of-action-and-milestones:
         Incomplete RACI matrix and security training program implementation could
         lead to unclear responsibilities and insufficient security awareness among
         development team members.
+      props:
+         - name: label
+            value: risk-1
       status: open
       characterizations:
         - origin:
