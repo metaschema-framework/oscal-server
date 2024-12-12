@@ -90,7 +90,7 @@ class OscalVerticle : CoroutineVerticle() {
                 Files.createDirectory(oscalDir)
                 restrictDirectoryPermissions(oscalDir)
             } catch (e: Exception) {
-                throw SecurityException("Failed to create secure OSCAL directory: ${e.message}")
+                throw SecurityException("Failed to create secure OSCAL directory", e)
             }
         }
         
