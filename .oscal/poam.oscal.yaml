@@ -167,7 +167,7 @@ plan-of-action-and-milestones:
           lifecycle: completed
           title: "Implement File System Access Controls"
           description: >-
-            Implement OSCAL_SERVER_PATH environment variable to restrict server
+            Implement `OSCAL_SERVER_PATH` environment variable to restrict server access to the filesystem with allow-list to only permit filesystem access to enumerated paths
             file system access to specific authorized directories only.
           props:
             - name: type
