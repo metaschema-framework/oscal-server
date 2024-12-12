@@ -87,19 +87,20 @@ system-security-plan:
         - title: "Software Development Information"
           uuid: 370026f8-582b-4c02-9331-a5c84afdbfd8
           description: "Source code, build configurations, and development artifacts"
+          categorization:
+            system: https://doi.org/10.6028/NIST.SP.800-60v2r1
+            information-type-id: C.3.5.1
           confidentiality-impact:
-            base: fips-199-moderate
-            selected: fips-199-moderate
-            adjustment-justification: "Default FIPS-199 moderate impact"
+            base: fips-199-low
+            selected: fips-199-low
           integrity-impact:
             base: fips-199-moderate
-            selected: fips-199-moderate
-            adjustment-justification: "Default FIPS-199 moderate impact"
+            selected: fips-199-low
+            adjustment-justification: >-
+              This library is provided as a public domain application built with free, open-source, and public domain libraries. Vendors using this application must review and confirm the integrity of the codebase and its changes over time and use the Merkle-tree data structure with integrity checking mechanisms as provided by the `git` utility, protocol, and GitHub code sharing service. Integrity checking is free and ubiqutous, and the impact of integrity violation to this code base is low, not moderate.
           availability-impact:
             base: fips-199-moderate
-            selected: fips-199-moderate
-            adjustment-justification: "Default FIPS-199 moderate impact"
-    
+            selected: fips-199-low
     security-impact-level:
       security-objective-confidentiality: moderate
       security-objective-integrity: moderate
