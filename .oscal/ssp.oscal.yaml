@@ -41,20 +41,16 @@ system-security-plan:
             value: Senior Software Architect
       - uuid: 88888888-0000-4000-9000-100000000008
         type: person
-        name: "John Doe"
+        name: "AJ Stein"
         props:
           - name: job-title
-            value: Document Preparer
+            value: Senior Security Architect
       - uuid: 99999999-0000-4000-9000-100000000009
         type: organization
         name: "FedRAMP PMO"
-        addresses:
-          - addr-lines:
-              - "1234 FedRAMP Way"
-            city: "Washington"
-            state: "DC"
-            postal-code: "20001"
-
+        links:
+          - href: https://fedramp.gov
+            rel: homepage
     responsible-parties:
       - role-id: system-owner
         party-uuids:
