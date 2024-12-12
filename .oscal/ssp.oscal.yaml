@@ -114,9 +114,18 @@ system-security-plan:
 
     authorization-boundary:
       description: "The authorization boundary encompasses all core development systems"
-    
+      diagrams:
+        - description: "a simple diagram in mermaid"
+          links:
+            - href: "#11111111-2222-3333-4444-555555555555"
+
     network-architecture:
       description: "Network architecture showing system components and connections"
+      diagrams:  
+        - description: "a simple diagram in mermaid"
+          links:
+            - href: "#11111111-3333-3333-4444-555555555555"
+
 
     data-flow:
       description: "Data flow between system components"
@@ -172,7 +181,7 @@ system-security-plan:
         status:
           state: operational
         responsible-roles:
-          role-id: information-security-officer
+          - role-id: information-security-officer
         links:
           - href: "poam.oscal.yaml"
             rel: poam-item
@@ -277,13 +286,33 @@ system-security-plan:
                 state: implemented
   back-matter:
     resources:
-      - uuid: 66666666-0000-4000-8000-100000000006
-        title: "System POA&M"
-        description: "Plan of Action and Milestones for the System"
-        rlinks:
-          - href: "poam.oscal.yaml"
-        props:
-          - name: type
-            ns: "https://fedramp.gov/ns/oscal"
-            value: "plan"
-            class: "poam"
+    - uuid: 11111111-2222-3333-4444-555555555555
+      title: Boundary Diagram
+      description: The primary authorization boundary diagram.
+      props:
+        - name: type
+          value: image
+          class: authorization-boundary
+      rlinks:
+        - href: ./attachments/diagrams/authorization-boundary.png
+        - href: ./attachments/diagrams/authorization-boundary.mermaid
+    - uuid: 11111111-3333-3333-4444-555555555555
+      title: Network Diagram
+      description: The primary network boundary diagram.
+      props:
+        - name: type
+          value: image
+          class: network-diagram
+      rlinks:
+        - href: ./attachments/diagrams/network-diagram.svg
+        - href: ./attachments/diagrams/network-diagram.mermaid
+    - uuid: 66666666-0000-4000-8000-100000000006
+      title: "System POA&M"
+      description: "Plan of Action and Milestones for the System"
+      rlinks:
+        - href: "poam.oscal.yaml"
+      props:
+        - name: type
+          ns: "https://fedramp.gov/ns/oscal"
+          value: "plan"
+          class: "poam"

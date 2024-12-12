@@ -1,0 +1,61 @@
+flowchart TD
+    subgraph External["External Boundary"]
+        Client[Web Client]
+    end
+
+    subgraph AuthBoundary["Authorization Boundary"]
+        direction TB
+        
+        subgraph ServerControls["Server Security Controls"]
+            LocalHost["Localhost Only\nPort 8888"]
+            Router["Router/API Gateway\nInput Validation"]
+        end
+
+        subgraph FileSystemControls["Filesystem Security Controls"]
+            DirVal["Directory Validation"]
+            PathCheck["Path Traversal Check"]
+            UrlProcess["URL Processing\nHTTPS/File Only"]
+            PermCheck["Permission Checks"]
+        end
+
+        subgraph TrustedZone["Trusted Zone"]
+            OscalDir["~/.oscal Directory\nOwner RWX Only"]
+            AllowedDirs["Allowed Directories\nvia OSCAL_SERVER_PATH"]
+            TempFiles["Temporary Files\nRestricted Access"]
+        end
+
+        subgraph Validation["Security Validation"]
+            ValidateDir["validateDirectory()"]
+            RestrictPerms["restrictDirectoryPermissions()"]
+            SymlinkCheck["Symlink Validation"]
+        end
+    end
+
+    Client -->|HTTP Requests| LocalHost
+    LocalHost -->|Validated Requests| Router
+    
+    Router -->|File Operations| FileSystemControls
+    
+    FileSystemControls -->|Access Check| DirVal
+    FileSystemControls -->|Traversal Prevention| PathCheck
+    FileSystemControls -->|URL Validation| UrlProcess
+    FileSystemControls -->|Permission Validation| PermCheck
+    
+    DirVal -->|Validated Access| TrustedZone
+    PathCheck -->|Safe Paths| TrustedZone
+    UrlProcess -->|Safe URLs| TrustedZone
+    PermCheck -->|Verified Permissions| TrustedZone
+    
+    TrustedZone <-->|Security Checks| Validation
+    
+    classDef external fill:#ddd,stroke:#999,stroke-width:1px;
+    classDef boundary fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef controls fill:#aef,stroke:#333,stroke-width:1px;
+    classDef trusted fill:#bfb,stroke:#333,stroke-width:1px;
+    classDef validation fill:#feb,stroke:#333,stroke-width:1px;
+    
+    class External external;
+    class AuthBoundary boundary;
+    class ServerControls,FileSystemControls controls;
+    class TrustedZone trusted;
+    class Validation validation;

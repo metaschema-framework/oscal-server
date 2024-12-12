@@ -123,8 +123,8 @@ class OscalVerticle : CoroutineVerticle() {
                     allowedDirs.add(path)
                     logger.info("Added allowed directory from OSCAL_SERVER_PATH: $path")
                 } catch (e: Exception) {
-                    logger.error("Invalid directory in OSCAL_SERVER_PATH: $dir - ${e.message}")
-                    throw SecurityException("Invalid directory configuration: $dir - ${e.message}")
+                    logger.error("Invalid directory in OSCAL_SERVER_PATH: $dir", e)
+                    throw SecurityException("Invalid directory configuration: $dir", e)
                 }
             }
         } else {
