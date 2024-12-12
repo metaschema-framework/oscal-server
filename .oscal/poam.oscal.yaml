@@ -51,6 +51,20 @@ plan-of-action-and-milestones:
       collected: "2024-10-24T12:00:00-04:00"
       remarks: "Server has unrestricted access to entire file system. No environment variable constraints are in place to limit file access to specific directories."
 
+    - uuid: 77777777-0000-4000-9000-100000000027
+      title: "HTTPS URL Validation Assessment"
+      description: "Examine implementation of URL validation controls for SSRF prevention"
+      methods:
+        - EXAMINE
+        - TEST
+      types:
+        - finding
+      subjects:
+        - subject-uuid: 66666666-0000-4000-9000-100000000006
+          type: component
+      collected: "2024-10-24T12:00:00-04:00"
+      remarks: "The processUrl() method accepts any HTTPS URL without validation, potentially enabling Server-Side Request Forgery (SSRF) attacks. No URL validation or domain whitelist mechanisms are currently implemented."
+
   risks:
     - uuid: 77777777-0000-4000-9000-100000000014
       title: "RISK-1: Inadequate Security Requirements Management"
@@ -187,6 +201,51 @@ plan-of-action-and-milestones:
                   end: "2024-12-15T00:00:00-04:00"
       related-observations:
         - observation-uuid: 77777777-0000-4000-9000-100000000022
+    - uuid: 77777777-0000-4000-9000-100000000028
+      title: "RISK-4: SSRF Vulnerability in URL Processing"
+      description: "Lack of URL validation controls enables potential SSRF attacks"
+      statement: >-
+        The absence of URL validation in the processUrl() method allows requests to
+        any HTTPS endpoint, which could be exploited for Server-Side Request
+        Forgery (SSRF) attacks. This could enable attackers to probe internal
+        networks, access sensitive services, or perform denial of service attacks.
+      status: open
+      characterizations:
+        - origin:
+            actors:
+              - type: party
+                actor-uuid: 11111111-0000-4000-9000-100000000001
+          facets:
+            - name: likelihood
+              system: https://fedramp.gov
+              value: high
+            - name: impact
+              system: https://fedramp.gov
+              value: high
+      deadline: "2025-01-15T00:00:00-04:00"
+      remediations:
+        - uuid: 77777777-0000-4000-9000-100000000029
+          lifecycle: planned
+          title: "Implement URL Validation Controls"
+          description: >-
+            Implement comprehensive URL validation including domain whitelist,
+            IP address blocking, and protocol restrictions. Add input validation
+            and proper error handling for all URL processing.
+          props:
+            - name: type
+              value: mitigate
+          tasks:
+            - uuid: 77777777-0000-4000-9000-100000000030
+              type: milestone
+              title: "URL Validation Implementation"
+              description: "Implement and test URL validation controls including domain whitelist"
+              timing:
+                within-date-range:
+                  start: "2024-12-01T00:00:00-04:00"
+                  end: "2025-01-15T00:00:00-04:00"
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000027
+
 
   poam-items:
     - uuid: 77777777-0000-4000-9000-100000000020
@@ -199,7 +258,6 @@ plan-of-action-and-milestones:
         - observation-uuid: 77777777-0000-4000-9000-100000000012
       related-risks:
         - risk-uuid: 77777777-0000-4000-9000-100000000014
-
     - uuid: 77777777-0000-4000-9000-100000000021
       title: "Complete Role Management Implementation"
       description: >-
@@ -210,7 +268,6 @@ plan-of-action-and-milestones:
         - observation-uuid: 77777777-0000-4000-9000-100000000013
       related-risks:
         - risk-uuid: 77777777-0000-4000-9000-100000000017
-
     - uuid: 77777777-0000-4000-9000-100000000026
       title: "Implement File System Access Restrictions"
       description: >-
@@ -221,6 +278,16 @@ plan-of-action-and-milestones:
         - observation-uuid: 77777777-0000-4000-9000-100000000022
       related-risks:
         - risk-uuid: 77777777-0000-4000-9000-100000000023
+    - uuid: 77777777-0000-4000-9000-100000000031
+      title: "Implement URL Validation Controls"
+      description: >-
+        Implementation of URL validation controls including domain whitelist,
+        IP address blocking, and comprehensive input validation to prevent
+        SSRF attacks.
+      related-observations:
+        - observation-uuid: 77777777-0000-4000-9000-100000000027
+      related-risks:
+        - risk-uuid: 77777777-0000-4000-9000-100000000028
   back-matter:
     resources:
       - uuid: 77777777-0000-4000-9900-100000000000
