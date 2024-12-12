@@ -61,9 +61,6 @@ system-security-plan:
       - role-id: prepared-by
         party-uuids:
           - 88888888-0000-4000-9000-100000000008
-      - role-id: prepared-for
-        party-uuids:
-          - 99999999-0000-4000-9000-100000000009
 
     props:
       - name: marking
