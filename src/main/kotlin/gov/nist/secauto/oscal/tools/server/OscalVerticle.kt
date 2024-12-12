@@ -396,6 +396,12 @@ class OscalVerticle : CoroutineVerticle() {
                     } else {
                         sendErrorResponse(ctx, 400, result.first.exitCode.toString())
                     }
+                    // Clean up temporary file
+                    try {
+                        Files.deleteIfExists(tempFile)
+                    } catch (e: Exception) {
+                        logger.warn("Failed to delete temporary file: $tempFile", e)
+                    }
                     // Temporary file may be cleaned up later if desired
                 } else {
                     sendErrorResponse(ctx, 400, "No content in request body")
