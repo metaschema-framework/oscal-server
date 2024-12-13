@@ -75,7 +75,6 @@ plan-of-action-and-milestones:
         vulnerabilities. This poses significant risk to the development environment
         and resulting software products.
       props:
-      props:
         - name: label
           value: risk-1
       status: open
