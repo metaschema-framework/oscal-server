@@ -123,7 +123,7 @@ plan-of-action-and-milestones:
         development team members.
       props:
          - name: label
-            value: risk-1
+            value: risk-2
       status: open
       characterizations:
         - origin:
