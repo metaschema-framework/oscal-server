@@ -576,57 +576,61 @@ class OscalVerticle : CoroutineVerticle() {
     }
     private suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
-        return withContext(vertx.dispatcher()) {
-            awaitBlocking {                                
-                // Create a mutable list from args
+        return try {
+            withContext(Dispatchers.IO) {  // Use IO dispatcher for better threading
                 val mutableArgs = args.toMutableList()
-        
-                // Generate SARIF file name and path
                 val guid = UUID.randomUUID().toString()
                 val sarifFileName = "${guid}.sarif"
-                val sarifFilePath = oscalDir.resolve(sarifFileName).toString()
-                                
-                logger.info("SARIF file path: $sarifFilePath")
-                if(mutableArgs.contains(("-o"))){
+                
+                // Use memory-efficient path resolution
+                val sarifFilePath = oscalDir.resolve(sarifFileName).let { 
+                    if (Files.exists(it)) Files.delete(it)
+                    it.toString()
+                }
+                
+                logger.debug("SARIF file path: $sarifFilePath")  // Changed to debug level
+                
+                if (mutableArgs.contains("-o")) {
                     throw Error("Do not specify sarif file")
                 }
-                val isQuery=mutableArgs[1]=="metapath";
-                if (listOf("metaschema","validate").contains(mutableArgs[0])&&!isQuery){
-                    mutableArgs.add("--sarif-include-pass")
-                    mutableArgs.add("-o")    
+    
+                // Optimize argument processing
+                val isQuery = mutableArgs.getOrNull(1) == "metapath"
+                if (!isQuery && mutableArgs[0] in listOf("metaschema", "validate")) {
+                    mutableArgs.apply {
+                        add("--sarif-include-pass")
+                        add("-o")
+                        add(sarifFilePath)
+                    }
                 }
-                if(!isQuery){
-                    mutableArgs.add(sarifFilePath)
-                }
-
-                logger.info(mutableArgs.joinToString(" "))
-                
+    
+                // Execute CLI command with optimized error handling
                 val exitStatus = try {
-                        CLI.runCli(*mutableArgs.toTypedArray())
+                    CLI.runCli(*mutableArgs.toTypedArray())
                 } catch (e: Exception) {
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
                 }
-                // Check if SARIF file was created
-                if (!File(sarifFilePath).exists()) {
+    
+                // Efficient SARIF file handling
+                if (!Files.exists(Paths.get(sarifFilePath))) {
                     val exitCode = "code:${exitStatus.exitCode}"
                     val basicSarif = when (exitStatus) {
-                        is MessageExitStatus -> {
-                            // Always create SARIF, but include message if available
-                            val message = exitStatus.message
-                            if (!message.isNullOrEmpty()) {
-                                createBasicSarif(exitCode+" "+ message)
-                            } else {
-                                createBasicSarif(exitCode)
-                            }
-                        }
+                        is MessageExitStatus -> createBasicSarif(
+                            exitStatus.message?.let { "$exitCode $it" } ?: exitCode
+                        )
                         else -> createBasicSarif(exitCode)
                     }
                     
-                    File(sarifFilePath).writeText(basicSarif)
+                    // Use buffered writer for better IO performance
+                    Files.newBufferedWriter(Paths.get(sarifFilePath)).use { writer ->
+                        writer.write(basicSarif)
+                    }
                 }
-                activeWorkers.decrementAndGet()
+    
                 Pair(exitStatus, sarifFilePath)
             }
+        } finally {
+            activeWorkers.decrementAndGet()
         }
     }
 
