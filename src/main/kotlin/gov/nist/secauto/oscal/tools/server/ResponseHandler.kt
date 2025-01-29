@@ -5,74 +5,101 @@
 
 package gov.nist.secauto.oscal.tools.server
 
-import gov.nist.secauto.metaschema.cli.processor.ExitStatus
-import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
-import java.io.File
+import io.vertx.core.json.JsonObject
+import gov.nist.secauto.metaschema.cli.processor.ExitStatus
+import org.apache.logging.log4j.Logger
+import org.apache.logging.log4j.LogManager
 
 class ResponseHandler {
-    fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, sarifFilePath: String) {
-        val fileContent = File(sarifFilePath).readText()
-        ctx.response()
-            .setStatusCode(200) // HTTP 200 OK
-            .putHeader("Exit-Status", exitStatus.exitCode.toString())
-            .end(fileContent)
+    private val logger: Logger = LogManager.getLogger(ResponseHandler::class.java)
+
+    fun sendSuccessResponse(ctx: RoutingContext, exitStatus: ExitStatus, output: String) {
+        try {
+            when {
+                ctx.response().headers().get("Content-Type")?.startsWith("application/json") == true -> {
+                    // For JSON responses, try to parse and send as JSON
+                    try {
+                        val jsonOutput = JsonObject(output)
+                        ctx.response()
+                            .setStatusCode(200)
+                            .end(jsonOutput.encode())
+                    } catch (e: Exception) {
+                        // If parsing fails, send as plain text
+                        logger.warn("Failed to parse output as JSON, sending as text: ${e.message}")
+                        ctx.response()
+                            .setStatusCode(200)
+                            .putHeader("Content-Type", "text/plain")
+                            .end(output)
+                    }
+                }
+                else -> {
+                    // For non-JSON responses, send as is with the already set Content-Type
+                    ctx.response()
+                        .setStatusCode(200)
+                        .end(output)
+                }
+            }
+        } catch (e: Exception) {
+            logger.error("Error sending success response", e)
+            sendErrorResponse(ctx, 500, "Error sending response: ${e.message}")
+        }
     }
 
-    fun sendErrorResponse(ctx: RoutingContext, exitCode: Int, message: String) {
-        ctx.response()
-            .setStatusCode(exitCode)
-            .putHeader("Exit-Status", "PROCESSING_ERROR")
-            .end(JsonObject().put("error", message).encode())
+    fun sendErrorResponse(ctx: RoutingContext, statusCode: Int, message: String) {
+        try {
+            val response = JsonObject()
+                .put("error", message)
+            
+            ctx.response()
+                .setStatusCode(statusCode)
+                .putHeader("Content-Type", "application/json")
+                .end(response.encode())
+        } catch (e: Exception) {
+            logger.error("Error sending error response", e)
+            // Fallback to simple text response if JSON fails
+            ctx.response()
+                .setStatusCode(500)
+                .putHeader("Content-Type", "text/plain")
+                .end("Internal server error")
+        }
     }
 
-    fun mapMimeTypeToFormat(mimeType: String?, formatParam: String?): String {
-        // Check if a valid format parameter is provided
-        if (!formatParam.isNullOrBlank()) {
-            return when (formatParam.lowercase()) {
-                "json" -> "JSON"
-                "xml" -> "XML"
-                "yaml" -> "YAML"
-                else -> "ERROR" 
+    fun flagToParam(flag: String): String {
+        return when (flag) {
+            "disable-schema" -> "--disable-schema"
+            "disable-constraint" -> "--disable-constraint"
+            else -> throw IllegalArgumentException("Unknown flag: $flag")
+        }
+    }
+
+    fun mapMimeTypeToFormat(acceptHeader: String?, formatParam: String?): String {
+        // If format parameter is provided, use it
+        formatParam?.let {
+            return when (it.lowercase()) {
+                "json" -> "json"
+                "xml" -> "xml"
+                "yaml" -> "yaml"
+                else -> "json" // default to JSON for unknown formats
             }
         }
 
-        // If no valid format parameter, check the MIME type
-        mimeType?.lowercase()?.let {
-            return when {
-                it.contains("json") -> "JSON"
-                it.contains("xml") -> "XML"
-                it.contains("yaml") -> "YAML"
-                else -> "ERROR"
-            }
-        }
-
-        // Default to ERROR if neither a valid formatParam nor MIME type is provided
-        return "ERROR"
-    }
-
-    fun mapFormatToMimeType(format: String?): String {
-        return when (format) {
-            "JSON" -> "application/json"
-            "XML" -> "text/xml"
-            "YAML" -> "text/yaml"
-            else -> "ERROR"
+        // Otherwise try to map from Accept header
+        return when {
+            acceptHeader == null -> "json"
+            acceptHeader.contains("application/json") -> "json"
+            acceptHeader.contains("text/xml") || acceptHeader.contains("application/xml") -> "xml"
+            acceptHeader.contains("text/yaml") || acceptHeader.contains("application/yaml") -> "yaml"
+            else -> "json" // default to JSON
         }
     }
 
-    fun flagToParam(format: String): String {
-        return when (format) {
-            "disable-schema" -> "--disable-schema-validation"
-            "disable-constraint" -> "--disable-constraint-validation"
-            else -> "--quiet"
+    fun mapFormatToMimeType(format: String): String {
+        return when (format.lowercase()) {
+            "json" -> "application/json"
+            "xml" -> "text/xml"
+            "yaml" -> "text/yaml"
+            else -> "application/json" // default to JSON
         }
-    }
-
-    fun unescapeXmlString(xml: String): String {
-        return xml.replace("\\\"", "\"")  // Replace escaped quotes with regular quotes
-                 .replace("\\'", "'")      // Replace escaped single quotes
-                 .replace("\\n", "\n")     // Replace escaped newlines
-                 .replace("\\r", "\r")     // Replace escaped carriage returns
-                 .replace("\\t", "\t")     // Replace escaped tabs
     }
 }

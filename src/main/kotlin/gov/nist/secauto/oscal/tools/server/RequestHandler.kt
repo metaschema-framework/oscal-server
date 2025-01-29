@@ -15,12 +15,14 @@ import java.nio.file.Files
 import kotlin.io.path.appendText
 import kotlinx.coroutines.Job
 import kotlin.coroutines.CoroutineContext
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 class RequestHandler(
     private val urlProcessor: UrlProcessor,
     private val commandExecutor: CommandExecutor,
     private val responseHandler: ResponseHandler,
-    private val oscalDir: java.nio.file.Path
+    private val oscalDir: Path
 ) : CoroutineScope {
     private val logger: Logger = LogManager.getLogger(RequestHandler::class.java)
     private val job = Job()
@@ -148,74 +150,43 @@ class RequestHandler(
     }
 
     fun handleValidateFileUpload(ctx: RoutingContext) {
-        logger.info("Handling file upload request!")
         launch {
             try {
-                logger.info("Handling file upload request in the background")
-                var body = ctx.body().asString()
-                // Remove surrounding quotes if they exist
-                if (body.startsWith("\"") && body.endsWith("\"")) {
-                    body = body.substring(1, body.length - 1)
+                logger.info("Handling file upload request")
+                val fileUploads = ctx.fileUploads()
+                if (fileUploads.isEmpty()) {
+                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                    return@launch
                 }
-                if (body.trim().startsWith("<")) {
-                    body = responseHandler.unescapeXmlString(body)
-                }
-                logger.info("Received body: $body")
+
+                val upload = fileUploads.first()
                 val flags = ctx.queryParam("flags")
                 val encodedModule = ctx.queryParam("module").firstOrNull()
                 
-                // Get the format parameter if provided
-                val formatParam = ctx.queryParam("format").firstOrNull()?.lowercase()
-                val fileExtension = when (formatParam) {
-                    "json" -> ".json"
-                    "xml" -> ".xml"
-                    "yaml" -> ".yaml"
-                    else -> ".tmp"
-                }
-    
-                if (body.isNotEmpty()) {
-                    // Create a temporary file with the chosen extension
-                    val tempFile = Files.createTempFile(oscalDir, "upload", fileExtension)
-                    val tempFilePath = tempFile.toAbsolutePath()
-                    logger.info("Created temporary file: $tempFilePath")
-    
-                    // Prepare CLI arguments
-                    val args = mutableListOf("validate")
-                    encodedModule?.let { module ->
-                        if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                            args[0] = "metaschema"
-                            args.add("validate")
-                        } else {
-                            args[0] = "metaschema"
-                            args.add("validate-content")
-                        }
-                    }
-                    args.add(tempFilePath.toString())
-                    args.add("--show-stack-trace")
-                    flags.forEach { flag ->
-                        args.add(responseHandler.flagToParam(flag))
-                    }
-    
-                    // Write the body content to the temporary file
-                    tempFile.appendText(body)
-                    logger.info("Wrote body content to temporary file")
-    
-                    val result = commandExecutor.executeCommand(args)
-                    logger.info("Validation result: ${result.second}")
-    
-                    if (result.first.exitCode == gov.nist.secauto.metaschema.cli.processor.ExitCode.OK) {
-                        responseHandler.sendSuccessResponse(ctx, result.first, result.second)
+                // Prepare CLI arguments
+                val args = mutableListOf("validate")
+                encodedModule?.let { module ->
+                    if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
+                        args[0] = "metaschema"
+                        args.add("validate")
                     } else {
-                        responseHandler.sendErrorResponse(ctx, 400, result.first.exitCode.toString())
+                        args[0] = "metaschema"
+                        args.add("validate-content")
                     }
-                    // Clean up temporary file
-                    try {
-                        Files.deleteIfExists(tempFile)
-                    } catch (e: Exception) {
-                        logger.warn("Failed to delete temporary file: $tempFile", e)
-                    }
+                }
+                args.add(upload.uploadedFileName())
+                args.add("--show-stack-trace")
+                flags.forEach { flag ->
+                    args.add(responseHandler.flagToParam(flag))
+                }
+
+                val result = commandExecutor.executeCommand(args)
+                logger.info("Validation result: ${result.second}")
+
+                if (result.first.exitCode == gov.nist.secauto.metaschema.cli.processor.ExitCode.OK) {
+                    responseHandler.sendSuccessResponse(ctx, result.first, result.second)
                 } else {
-                    responseHandler.sendErrorResponse(ctx, 400, "No content in request body")
+                    responseHandler.sendErrorResponse(ctx, 400, result.first.exitCode.toString())
                 }
             } catch (e: Exception) {
                 logger.error("Error handling file upload request", e)
@@ -228,23 +199,20 @@ class RequestHandler(
         launch {
             try {
                 logger.info("Handling Query file upload request")
-                val body = ctx.body().asString()
+                val fileUploads = ctx.fileUploads()
+                if (fileUploads.isEmpty()) {
+                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                    return@launch
+                }
+
+                val upload = fileUploads.first()
                 val expression = ctx.queryParam("expression").firstOrNull()
                 val module = ctx.queryParam("module").firstOrNull()
 
-                if (body.isNotEmpty() && expression != null && module != null) {
-                    // Create a temporary file
-                    val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
-                    val tempFilePath = tempFile.toAbsolutePath()
-                    logger.info("Created temporary file: $tempFilePath")
-
-                    // Write the body content to the temporary file
-                    tempFile.appendText(body)
-                    logger.info("Wrote body content to temporary file")
-
+                if (expression != null && module != null) {
                     val args = mutableListOf("metaschema", "metapath", "eval")
                     args.add("-i")
-                    args.add(urlProcessor.processUrl(tempFilePath.toString()))
+                    args.add(upload.uploadedFileName())
                     args.add("-e")
                     args.add(expression)
                     args.add("-m")
@@ -254,7 +222,7 @@ class RequestHandler(
                     logger.info(result.second)
                     responseHandler.sendSuccessResponse(ctx, result.first, result.second)
                 } else {
-                    responseHandler.sendErrorResponse(ctx, 400, "Missing request body or expression parameter")
+                    responseHandler.sendErrorResponse(ctx, 400, "Missing expression or module parameter")
                 }
             } catch (e: Exception) {
                 logger.error("Error handling file upload request", e)
@@ -267,31 +235,24 @@ class RequestHandler(
         launch {
             try {
                 logger.info("Handling Resolve file upload request")
-                val body = ctx.body().asString()
+                val fileUploads = ctx.fileUploads()
+                if (fileUploads.isEmpty()) {
+                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                    return@launch
+                }
+
+                val upload = fileUploads.first()
                 val acceptHeader = ctx.request().getHeader("Accept")
                 val formatParam = ctx.queryParam("format").firstOrNull()
                 val format = responseHandler.mapMimeTypeToFormat(acceptHeader, formatParam)
 
-                if (body.isNotEmpty()) {
-                    // Create a temporary file
-                    val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
-                    val tempFilePath = tempFile.toAbsolutePath()
-                    logger.info("Created temporary file: $tempFilePath")
-
-                    // Write the body content to the temporary file
-                    tempFile.appendText(body)
-                    logger.info("Wrote body content to temporary file")
-
-                    val result = commandExecutor.executeCommand(
-                        parseCommandToArgs("resolve-profile ${urlProcessor.processUrl(tempFilePath.toString())} --to=$format")
-                    )
-                    
-                    logger.info(result.second)
-                    ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
-                    responseHandler.sendSuccessResponse(ctx, result.first, result.second)
-                } else {
-                    responseHandler.sendErrorResponse(ctx, 400, "No content in request body")
-                }
+                val result = commandExecutor.executeCommand(
+                    parseCommandToArgs("resolve-profile ${upload.uploadedFileName()} --to=$format")
+                )
+                
+                logger.info(result.second)
+                ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
+                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
             } catch (e: Exception) {
                 logger.error("Error handling file upload request", e)
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
@@ -303,31 +264,24 @@ class RequestHandler(
         launch {
             try {
                 logger.info("Handling Convert file upload request")
-                val body = ctx.body().asString()
+                val fileUploads = ctx.fileUploads()
+                if (fileUploads.isEmpty()) {
+                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                    return@launch
+                }
+
+                val upload = fileUploads.first()
                 val acceptHeader = ctx.request().getHeader("Accept")
                 val formatParam = ctx.queryParam("format").firstOrNull()
                 val format = responseHandler.mapMimeTypeToFormat(acceptHeader, formatParam)
 
-                if (body.isNotEmpty()) {
-                    // Create a temporary file
-                    val tempFile = Files.createTempFile(oscalDir, "upload", ".tmp")
-                    val tempFilePath = tempFile.toAbsolutePath()
-                    logger.info("Created temporary file: $tempFilePath")
-
-                    // Write the body content to the temporary file
-                    tempFile.appendText(body)
-                    logger.info("Wrote body content to temporary file")
-
-                    val result = commandExecutor.executeCommand(
-                        parseCommandToArgs("convert ${urlProcessor.processUrl(tempFilePath.toString())} --to=$format")
-                    )
-                    
-                    logger.info(result.second)
-                    ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
-                    responseHandler.sendSuccessResponse(ctx, result.first, result.second)
-                } else {
-                    responseHandler.sendErrorResponse(ctx, 400, "No content in request body")
-                }
+                val result = commandExecutor.executeCommand(
+                    parseCommandToArgs("convert ${upload.uploadedFileName()} --to=$format")
+                )
+                
+                logger.info(result.second)
+                ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
+                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
             } catch (e: Exception) {
                 logger.error("Error handling file upload request", e)
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")

@@ -16,6 +16,8 @@ import org.apache.logging.log4j.LogManager
 class DirectoryManager {
     private val logger: Logger = LogManager.getLogger(DirectoryManager::class.java)
     private lateinit var oscalDir: Path
+    private lateinit var packagesDir: Path
+    private lateinit var uploadsDir: Path
     private val allowedDirs = mutableListOf<Path>()
 
     fun initialize(): Path {
@@ -55,16 +57,52 @@ class DirectoryManager {
         if (!Files.isDirectory(oscalDir)) {
             throw SecurityException("OSCAL path exists but is not a directory: $oscalDir")
         }
+
+        // Create packages directory if it doesn't exist
+        packagesDir = oscalDir.resolve("packages")
+        if (!Files.exists(packagesDir)) {
+            try {
+                Files.createDirectory(packagesDir)
+                restrictDirectoryPermissions(packagesDir)
+                logger.info("Created packages directory at: $packagesDir")
+            } catch (e: Exception) {
+                throw SecurityException("Failed to create secure packages directory", e)
+            }
+        }
+        
+        if (!Files.isDirectory(packagesDir)) {
+            throw SecurityException("Packages path exists but is not a directory: $packagesDir")
+        }
+
+        // Create uploads directory if it doesn't exist
+        uploadsDir = oscalDir.resolve("uploads")
+        if (!Files.exists(uploadsDir)) {
+            try {
+                Files.createDirectory(uploadsDir)
+                restrictDirectoryPermissions(uploadsDir)
+                logger.info("Created uploads directory at: $uploadsDir")
+            } catch (e: Exception) {
+                throw SecurityException("Failed to create secure uploads directory", e)
+            }
+        }
+        
+        if (!Files.isDirectory(uploadsDir)) {
+            throw SecurityException("Uploads path exists but is not a directory: $uploadsDir")
+        }
         
         logger.info("OSCAL directory initialized at: $oscalDir")
+        logger.info("Packages directory initialized at: $packagesDir")
+        logger.info("Uploads directory initialized at: $uploadsDir")
     }
 
     private fun initializeAllowedDirectories() {
         // Clear existing allowed directories
         allowedDirs.clear()
         
-        // Always add ~/.oscal as the first allowed directory
+        // Add ~/.oscal and its subdirectories as allowed directories
         allowedDirs.add(oscalDir)
+        allowedDirs.add(packagesDir)
+        allowedDirs.add(uploadsDir)
 
         val envPath = System.getenv("OSCAL_SERVER_PATH")
         if (!envPath.isNullOrBlank()) {
@@ -86,7 +124,7 @@ class DirectoryManager {
                 }
             }
         } else {
-            logger.warn("OSCAL_SERVER_PATH environment variable not set - only ~/.oscal will be accessible")
+            logger.warn("OSCAL_SERVER_PATH environment variable not set - only ~/.oscal and its subdirectories will be accessible")
         }
 
         if (allowedDirs.isEmpty()) {
@@ -104,8 +142,8 @@ class DirectoryManager {
                 throw SecurityException("Path is not a directory: $path")
             !Files.isReadable(path) -> 
                 throw SecurityException("Directory is not readable: $path")
-            path.startsWith(oscalDir) && !path.equals(oscalDir) -> 
-                throw SecurityException("Security violation: Subdirectories of ~/.oscal are not allowed")
+            path.startsWith(oscalDir) && !path.equals(oscalDir) && !path.equals(packagesDir) && !path.equals(uploadsDir) -> 
+                throw SecurityException("Security violation: Only ~/.oscal and its designated subdirectories are allowed")
         }
     }
 
