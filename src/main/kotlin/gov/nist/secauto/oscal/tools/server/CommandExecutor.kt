@@ -26,64 +26,75 @@ class CommandExecutor(private val oscalDir: Path) {
 
     suspend fun executeCommand(args: List<String>): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
+        logger.info("Executing command with arguments: ${args.joinToString(" ")}")
         return try {
-            withContext(Dispatchers.IO) {  // Use IO dispatcher for better threading
+            withContext(Dispatchers.IO) {
                 val mutableArgs = args.toMutableList()
-                val guid = UUID.randomUUID().toString()
-                val sarifFileName = "${guid}.sarif"
+                val isValidate = !mutableArgs[0].startsWith("convert") && !mutableArgs[0].startsWith("resolve-profile")
                 
-                // Use memory-efficient path resolution
-                val sarifFilePath = oscalDir.resolve(sarifFileName).let { 
-                    if (Files.exists(it)) Files.delete(it)
-                    it.toString()
-                }
-                
-                logger.debug("SARIF file path: $sarifFilePath")  // Changed to debug level
-                
-                if (mutableArgs.contains("-o")) {
-                    throw Error("Do not specify sarif file")
-                }
-    
-                // Optimize argument processing
-                val isQuery = mutableArgs.getOrNull(1) == "metapath"
-                if (!isQuery && mutableArgs[0] in listOf("metaschema", "validate")) {
-                    mutableArgs.apply {
-                        add("--sarif-include-pass")
-                        add("-o")
-                        add(sarifFilePath)
-                    }
-                }
-    
-                // Execute CLI command with optimized error handling
-                val exitStatus = try {
-                    CLI.runCli(*mutableArgs.toTypedArray())
-                } catch (e: Exception) {
-                    MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
-                }
-    
-                // Efficient SARIF file handling
-                if (!Files.exists(Paths.get(sarifFilePath))) {
-                    val exitCode = "code:${exitStatus.exitCode}"
-                    val basicSarif = when (exitStatus) {
-                        is MessageExitStatus -> createBasicSarif(
-                            exitStatus.message?.let { "$exitCode $it" } ?: exitCode
-                        )
-                        else -> createBasicSarif(exitCode)
+                if (isValidate) {
+                    // For validation operations, use SARIF output
+                    val guid = UUID.randomUUID().toString()
+                    val sarifFileName = "${guid}.sarif"
+                    
+                    val sarifFilePath = oscalDir.resolve(sarifFileName).let { 
+                        if (Files.exists(it)) Files.delete(it)
+                        it.toString()
                     }
                     
-                    // Use buffered writer for better IO performance
-                    Files.newBufferedWriter(Paths.get(sarifFilePath)).use { writer ->
-                        writer.write(basicSarif)
+                    logger.debug("SARIF file path: $sarifFilePath")
+                    
+                    if (mutableArgs.contains("-o")) {
+                        throw Error("Do not specify sarif file")
                     }
+        
+                    val isQuery = mutableArgs.getOrNull(1) == "metapath"
+                    if (!isQuery && mutableArgs[0] in listOf("metaschema", "validate")) {
+                        mutableArgs.apply {
+                            add("--sarif-include-pass")
+                            add("-o")
+                            add(sarifFilePath)
+                        }
+                    }
+        
+                    val exitStatus = try {
+                        CLI.runCli(*mutableArgs.toTypedArray())
+                    } catch (e: Exception) {
+                        MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
+                    }
+        
+                    if (!Files.exists(Paths.get(sarifFilePath))) {
+                        val exitCode = "code:${exitStatus.exitCode}"
+                        val basicSarif = when (exitStatus) {
+                            is MessageExitStatus -> createBasicSarif(
+                                exitStatus.message?.let { "$exitCode $it" } ?: exitCode
+                            )
+                            else -> createBasicSarif(exitCode)
+                        }
+                        
+                        Files.newBufferedWriter(Paths.get(sarifFilePath)).use { writer ->
+                            writer.write(basicSarif)
+                        }
+                    }
+        
+                    Pair(exitStatus, sarifFilePath)
+                } else {
+                    // For convert/resolve operations, just execute the command
+                    // The output file is already specified in the arguments
+                    val exitStatus = try {
+                        CLI.runCli(*mutableArgs.toTypedArray())
+                    } catch (e: Exception) {
+                        MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
+                    }
+
+                    // Return empty string since output file is handled by caller
+                    Pair(exitStatus, "")
                 }
-    
-                Pair(exitStatus, sarifFilePath)
             }
         } finally {
             activeWorkers.decrementAndGet()
         }
     }
-
     private fun createBasicSarif(errorMessage: String): String {
         val version = OscalCliVersion().getVersion()
         return """

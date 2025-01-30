@@ -27,6 +27,20 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+
+    - name: Build client
+      run: |
+        cd client
+        npm ci
+        npm run build
+        cd ..
 
     - name: Build with Maven
       run: mvn clean package

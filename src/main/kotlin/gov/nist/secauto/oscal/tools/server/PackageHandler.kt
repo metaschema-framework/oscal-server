@@ -62,36 +62,54 @@ class PackageHandler(private val packagesDir: Path) {
         try {
             val packageId = ctx.pathParam("packageId")
             val packageDir = packagesDir.resolve(packageId)
-
             // Create package directory if it doesn't exist
             if (!Files.exists(packageDir)) {
                 Files.createDirectories(packageDir)
             }
 
-            val fileUploads = ctx.fileUploads()
-            if (fileUploads.isEmpty()) {
+            logger.info("Handling content upload for package $packageId")
+            val body = ctx.body().asString()
+            if (body.isNullOrEmpty()) {
+                logger.error("No content provided")
                 ctx.response()
                     .setStatusCode(400)
                     .putHeader("Content-Type", "application/json")
-                    .end(JsonObject().put("error", "No file uploaded").encode())
+                    .end(JsonObject().put("error", "No content provided").encode())
                 return
             }
 
-            val upload = fileUploads.first()
-            val targetPath = packageDir.resolve(upload.fileName())
+            val contentType = ctx.request().getHeader("Content-Type")
+            val filename = ctx.pathParam("filename")!!
+            val targetPath = packageDir.resolve(filename)
             
-            // Move uploaded file to target location
-            Files.move(
-                Path.of(upload.uploadedFileName()),
-                targetPath,
-                StandardCopyOption.REPLACE_EXISTING
-            )
+            // Handle content based on content type
+            when (contentType?.lowercase()) {
+                "application/json" -> {
+                    // Parse and preserve root level object structure for JSON
+                    val jsonObject = JsonObject(body)
+                    val rootKey = jsonObject.fieldNames().first()
+                    val wrappedContent = JsonObject().put(rootKey, jsonObject.getJsonObject(rootKey))
+                    Files.write(targetPath, wrappedContent.encode().toByteArray())
+                }
+                "text/yaml", "application/yaml", "application/x-yaml" -> {
+                    // Store YAML content as-is
+                    Files.write(targetPath, body.toByteArray())
+                }
+                "text/xml", "application/xml" -> {
+                    // Store XML content as-is
+                    Files.write(targetPath, body.toByteArray())
+                }
+                else -> {
+                    // Default to storing content as-is
+                    Files.write(targetPath, body.toByteArray())
+                }
+            }
 
             val response = JsonObject()
                 .put("name", targetPath.fileName.toString())
                 .put("size", Files.size(targetPath))
                 .put("lastModified", Files.getLastModifiedTime(targetPath).toString())
-                .put("mimeType", Files.probeContentType(targetPath) ?: "application/octet-stream")
+                .put("mimeType", contentType ?: "application/octet-stream")
 
             ctx.response()
                 .setStatusCode(201)
@@ -140,35 +158,45 @@ class PackageHandler(private val packagesDir: Path) {
             val filename = ctx.pathParam("filename")
             val filePath = packagesDir.resolve(packageId).resolve(filename)
 
-            if (!Files.exists(filePath)) {
-                ctx.response()
-                    .setStatusCode(404)
-                    .putHeader("Content-Type", "application/json")
-                    .end(JsonObject().put("error", "File not found").encode())
-                return
-            }
-
-            val fileUploads = ctx.fileUploads()
-            if (fileUploads.isEmpty()) {
+            logger.info("Handling content update for package $packageId, file $filename")
+            val body = ctx.body().asString()
+            if (body.isNullOrEmpty()) {
+                logger.error("No content provided")
                 ctx.response()
                     .setStatusCode(400)
                     .putHeader("Content-Type", "application/json")
-                    .end(JsonObject().put("error", "No file uploaded").encode())
+                    .end(JsonObject().put("error", "No content provided").encode())
                 return
             }
 
-            val upload = fileUploads.first()
-            Files.move(
-                Path.of(upload.uploadedFileName()),
-                filePath,
-                StandardCopyOption.REPLACE_EXISTING
-            )
-
+            val contentType = ctx.request().getHeader("Content-Type")
+            // Handle content based on content type
+            when (contentType?.lowercase()) {
+                "application/json" -> {
+                    // Parse and preserve root level object structure for JSON
+                    val jsonObject = JsonObject(body)
+                    val rootKey = jsonObject.fieldNames().first()
+                    val wrappedContent = JsonObject().put(rootKey, jsonObject.getJsonObject(rootKey))
+                    Files.write(filePath, wrappedContent.encode().toByteArray())
+                }
+                "text/yaml", "application/yaml", "application/x-yaml" -> {
+                    // Store YAML content as-is
+                    Files.write(filePath, body.toByteArray())
+                }
+                "text/xml", "application/xml" -> {
+                    // Store XML content as-is
+                    Files.write(filePath, body.toByteArray())
+                }
+                else -> {
+                    // Default to storing content as-is
+                    Files.write(filePath, body.toByteArray())
+                }
+            }
             val response = JsonObject()
                 .put("name", filePath.fileName.toString())
                 .put("size", Files.size(filePath))
                 .put("lastModified", Files.getLastModifiedTime(filePath).toString())
-                .put("mimeType", Files.probeContentType(filePath) ?: "application/octet-stream")
+                .put("mimeType", contentType ?: "application/octet-stream")
 
             ctx.response()
                 .setStatusCode(200)

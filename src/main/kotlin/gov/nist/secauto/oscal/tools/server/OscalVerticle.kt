@@ -74,22 +74,33 @@ class OscalVerticle : CoroutineVerticle() {
         val routerBuilder = RouterBuilder.create(vertx, "webroot/openapi.yaml", options).coAwait()
         logger.info("Router builder created")
 
-        // Configure BodyHandler for file uploads
+        // Configure base BodyHandler for JSON/YAML/XML content
         val bodyHandler = BodyHandler.create()
-            .setUploadsDirectory(uploadsDir.toString()) // Set uploads directory
-            .setDeleteUploadedFilesOnEnd(true) // Clean up files after response
-            .setMergeFormAttributes(true)
-            .setHandleFileUploads(true)
-            .setBodyLimit(1000000000) // 1GB max file size
+            .setBodyLimit(1000000000) // 1GB max body size
+            .setPreallocateBodyBuffer(false)
 
-        // Add BodyHandler to handle file uploads
-        routerBuilder.rootHandler(bodyHandler)
-        
-        // Handle file upload operations
-        routerBuilder.operation("validateUpload").handler { ctx -> requestHandler.handleValidateFileUpload(ctx) }
-        routerBuilder.operation("resolveUpload").handler { ctx -> requestHandler.handleResolveFileUpload(ctx) }
-        routerBuilder.operation("convertUpload").handler { ctx -> requestHandler.handleConvertFileUpload(ctx) }
-        routerBuilder.operation("queryUpload").handler { ctx -> requestHandler.handleQueryFileUpload(ctx) }
+        // Add body handler before any other handlers
+        routerBuilder.bodyHandler(bodyHandler)
+
+        // Add logging handlers
+        routerBuilder.rootHandler { ctx ->
+            logger.info("Request handling: ${ctx.request().method()} ${ctx.request().uri()}")
+            ctx.next()
+        }
+
+        // Configure upload operations with direct body content
+        routerBuilder.operation("validateUpload").handler { ctx -> 
+            requestHandler.handleValidateFileUpload(ctx) 
+        }
+        routerBuilder.operation("resolveUpload").handler { ctx -> 
+            requestHandler.handleResolveFileUpload(ctx) 
+        }
+        routerBuilder.operation("convertUpload").handler { ctx -> 
+            requestHandler.handleConvertFileUpload(ctx) 
+        }
+        routerBuilder.operation("queryUpload").handler { ctx -> 
+            requestHandler.handleQueryFileUpload(ctx) 
+        }
         
         // Handle regular operations with suspend functions
         routerBuilder.operation("validate").handler { ctx ->
@@ -123,6 +134,7 @@ class OscalVerticle : CoroutineVerticle() {
         // Handle health check
         routerBuilder.operation("healthCheck").handler { ctx -> requestHandler.handleHealthCheck(ctx) }
 
+        // Create the router and add static file handler
         val router = routerBuilder.createRouter()
         router.route("/*").handler(StaticHandler.create("webroot"))
         logger.info("Router created successfully")

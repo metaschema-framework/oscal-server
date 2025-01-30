@@ -1,0 +1,128 @@
+/* Base form styles */
+.form-container {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Field styles */
+ion-item.field-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
+
+/* Array field styles */
+.array-field {
+  margin: 1rem 0;
+}
+
+.array-item {
+  margin: 0.5rem 0;
+}
+
+.array-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* Accordion styles */
+ion-accordion-group {
+  margin: 0.5rem 0;
+}
+
+ion-accordion {
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+ion-accordion ion-item[slot="header"] {
+  --background: var(--ion-color-light);
+  --border-radius: 8px;
+}
+
+ion-accordion ion-item[slot="header"] ion-label h2 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+ion-accordion ion-item[slot="header"] ion-label p {
+  font-size: 0.9rem;
+  color: var(--ion-color-medium);
+  margin: 0.25rem 0 0 0;
+}
+
+ion-accordion ion-item[slot="header"] ion-icon {
+  transition: transform 0.3s ease;
+}
+
+ion-accordion.accordion-expanded ion-item[slot="header"] ion-icon {
+  transform: rotate(180deg);
+}
+
+ion-accordion [slot="content"] {
+  padding: 0 1rem;
+}
+
+ion-accordion [slot="content"] ion-list {
+  background: transparent;
+  padding: 0;
+}
+
+ion-accordion [slot="content"] ion-item {
+  --background: transparent;
+  --border-color: var(--ion-color-light-shade);
+  margin: 0.5rem 0;
+}
+
+/* Required field indicator */
+ion-label.required::after {
+  content: " *";
+  color: var(--ion-color-danger);
+}
+
+/* Floating label adjustments */
+ion-item ion-label[position="floating"] {
+  margin-bottom: 8px;
+  color: var(--ion-color-medium);
+}
+
+/* Input field styles */
+ion-input, ion-textarea {
+  --background: var(--ion-color-light);
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --border-radius: 4px;
+  margin-top: 8px;
+}
+
+/* Button styles */
+ion-button.add-button {
+  margin-top: 1rem;
+}
+
+/* Modal styles */
+.form-modal ion-content {
+  --padding-top: 1rem;
+  --padding-bottom: 1rem;
+}
+
+/* UUID widget styles */
+.uuid-field {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  ion-accordion [slot="content"] {
+    padding: 0 0.5rem;
+  }
+  
+  ion-button.add-button {
+    width: 100%;
+  }
+}

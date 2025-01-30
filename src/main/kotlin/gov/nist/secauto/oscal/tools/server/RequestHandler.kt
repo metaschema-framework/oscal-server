@@ -17,6 +17,7 @@ import kotlinx.coroutines.Job
 import kotlin.coroutines.CoroutineContext
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.Path.of
 
 class RequestHandler(
     private val urlProcessor: UrlProcessor,
@@ -115,10 +116,21 @@ class RequestHandler(
                 val acceptHeader = ctx.request().getHeader("Accept")
                 val formatParam = ctx.queryParam("format").firstOrNull()
                 val format = responseHandler.mapMimeTypeToFormat(acceptHeader, formatParam)
-                val result = commandExecutor.executeCommand(parseCommandToArgs("resolve-profile $content --to=$format"))
+                
+                // Generate output file path
+                val outputFile = of(oscalDir.toString(), "resolve-${System.nanoTime()}.tmp")
+                
+                // Build command: resolve-profile --to=FORMAT source-file destination-file
+                val args = mutableListOf("resolve-profile", "--to=$format", content, outputFile.toString())
+                val result = commandExecutor.executeCommand(args)
+                
+                // Read output and clean up
+                val output = if (Files.exists(outputFile)) Files.readString(outputFile) else result.second
+                Files.deleteIfExists(outputFile)
+                
                 logger.info(result.second)
                 ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
-                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
+                responseHandler.sendSuccessResponse(ctx, result.first, output)
             } else {
                 responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
             }
@@ -136,10 +148,21 @@ class RequestHandler(
                 val acceptHeader = ctx.request().getHeader("Accept")
                 val formatParam = ctx.queryParam("format").firstOrNull()
                 val format = responseHandler.mapMimeTypeToFormat(acceptHeader, formatParam)
-                val result = commandExecutor.executeCommand(parseCommandToArgs("convert $content --to=$format"))
+                
+                // Generate output file path
+                val outputFile = of(oscalDir.toString(), "convert-${System.nanoTime()}.tmp")
+                
+                // Build command: convert --to=FORMAT source-file destination-file
+                val args = mutableListOf("convert", "--to=$format", content, outputFile.toString())
+                val result = commandExecutor.executeCommand(args)
+                
+                // Read output and clean up
+                val output = if (Files.exists(outputFile)) Files.readString(outputFile) else result.second
+                Files.deleteIfExists(outputFile)
+                
                 logger.info(result.second)
                 ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
-                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
+                responseHandler.sendSuccessResponse(ctx, result.first, output)
             } else {
                 responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
             }
@@ -149,47 +172,36 @@ class RequestHandler(
         }
     }
 
+    private suspend fun storeUploadedFile(body: String, prefix: String, contentType: String): Path {
+        val tempFile = of(oscalDir.toString(), "$prefix-${System.nanoTime()}${getExtensionFromContentType(contentType)}")
+        Files.writeString(tempFile, body)
+        return tempFile
+    }
+
     fun handleValidateFileUpload(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling file upload request")
-                val fileUploads = ctx.fileUploads()
-                if (fileUploads.isEmpty()) {
-                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                logger.info("Handling validate content request")
+                val body = ctx.body().asString()
+                if (body.isNullOrEmpty()) {
+                    logger.error("No content provided")
+                    responseHandler.sendErrorResponse(ctx, 400, "No content provided")
                     return@launch
                 }
 
-                val upload = fileUploads.first()
-                val flags = ctx.queryParam("flags")
-                val encodedModule = ctx.queryParam("module").firstOrNull()
+                val tempFile = storeUploadedFile(body, "validate", ctx.request().getHeader("Content-Type"))
                 
-                // Prepare CLI arguments
-                val args = mutableListOf("validate")
-                encodedModule?.let { module ->
-                    if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                        args[0] = "metaschema"
-                        args.add("validate")
-                    } else {
-                        args[0] = "metaschema"
-                        args.add("validate-content")
-                    }
-                }
-                args.add(upload.uploadedFileName())
-                args.add("--show-stack-trace")
-                flags.forEach { flag ->
-                    args.add(responseHandler.flagToParam(flag))
-                }
-
-                val result = commandExecutor.executeCommand(args)
-                logger.info("Validation result: ${result.second}")
-
-                if (result.first.exitCode == gov.nist.secauto.metaschema.cli.processor.ExitCode.OK) {
-                    responseHandler.sendSuccessResponse(ctx, result.first, result.second)
-                } else {
-                    responseHandler.sendErrorResponse(ctx, 400, result.first.exitCode.toString())
+                // Update the context's query parameters with the file path
+                val params = ctx.queryParams()
+                params.set("document", "file://${tempFile.toAbsolutePath()}")
+                
+                try {
+                    handleValidateRequest(ctx)
+                } finally {
+                    Files.deleteIfExists(tempFile)
                 }
             } catch (e: Exception) {
-                logger.error("Error handling file upload request", e)
+                logger.error("Error handling content request", e)
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
@@ -198,34 +210,27 @@ class RequestHandler(
     fun handleQueryFileUpload(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling Query file upload request")
-                val fileUploads = ctx.fileUploads()
-                if (fileUploads.isEmpty()) {
-                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                logger.info("Handling query content request")
+                val body = ctx.body().asString()
+                if (body.isNullOrEmpty()) {
+                    logger.error("No content provided")
+                    responseHandler.sendErrorResponse(ctx, 400, "No content provided")
                     return@launch
                 }
 
-                val upload = fileUploads.first()
-                val expression = ctx.queryParam("expression").firstOrNull()
-                val module = ctx.queryParam("module").firstOrNull()
-
-                if (expression != null && module != null) {
-                    val args = mutableListOf("metaschema", "metapath", "eval")
-                    args.add("-i")
-                    args.add(upload.uploadedFileName())
-                    args.add("-e")
-                    args.add(expression)
-                    args.add("-m")
-                    args.add(module)
-
-                    val result = commandExecutor.executeCommand(args)
-                    logger.info(result.second)
-                    responseHandler.sendSuccessResponse(ctx, result.first, result.second)
-                } else {
-                    responseHandler.sendErrorResponse(ctx, 400, "Missing expression or module parameter")
+                val tempFile = storeUploadedFile(body, "query", ctx.request().getHeader("Content-Type"))
+                
+                // Update the context's query parameters with the file path
+                val params = ctx.queryParams()
+                params.set("document", "file://${tempFile.toAbsolutePath()}")
+                
+                try {
+                    handleQueryRequest(ctx)
+                } finally {
+                    Files.deleteIfExists(tempFile)
                 }
             } catch (e: Exception) {
-                logger.error("Error handling file upload request", e)
+                logger.error("Error handling content request", e)
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
@@ -234,27 +239,27 @@ class RequestHandler(
     fun handleResolveFileUpload(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling Resolve file upload request")
-                val fileUploads = ctx.fileUploads()
-                if (fileUploads.isEmpty()) {
-                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                logger.info("Handling resolve content request")
+                val body = ctx.body().asString()
+                if (body.isNullOrEmpty()) {
+                    logger.error("No content provided")
+                    responseHandler.sendErrorResponse(ctx, 400, "No content provided")
                     return@launch
                 }
 
-                val upload = fileUploads.first()
-                val acceptHeader = ctx.request().getHeader("Accept")
-                val formatParam = ctx.queryParam("format").firstOrNull()
-                val format = responseHandler.mapMimeTypeToFormat(acceptHeader, formatParam)
-
-                val result = commandExecutor.executeCommand(
-                    parseCommandToArgs("resolve-profile ${upload.uploadedFileName()} --to=$format")
-                )
+                val tempFile = storeUploadedFile(body, "resolve", ctx.request().getHeader("Content-Type"))
                 
-                logger.info(result.second)
-                ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
-                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
+                // Update the context's query parameters with the file path
+                val params = ctx.queryParams()
+                params.set("document", "file://${tempFile.toAbsolutePath()}")
+                
+                try {
+                    handleResolveRequest(ctx)
+                } finally {
+                    Files.deleteIfExists(tempFile)
+                }
             } catch (e: Exception) {
-                logger.error("Error handling file upload request", e)
+                logger.error("Error handling content request", e)
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
@@ -263,33 +268,38 @@ class RequestHandler(
     fun handleConvertFileUpload(ctx: RoutingContext) {
         launch {
             try {
-                logger.info("Handling Convert file upload request")
-                val fileUploads = ctx.fileUploads()
-                if (fileUploads.isEmpty()) {
-                    responseHandler.sendErrorResponse(ctx, 400, "No file uploaded")
+                logger.info("Handling convert content request")
+                val body = ctx.body().asString()
+                if (body.isNullOrEmpty()) {
+                    logger.error("No content provided")
+                    responseHandler.sendErrorResponse(ctx, 400, "No content provided")
                     return@launch
                 }
 
-                val upload = fileUploads.first()
-                val acceptHeader = ctx.request().getHeader("Accept")
-                val formatParam = ctx.queryParam("format").firstOrNull()
-                val format = responseHandler.mapMimeTypeToFormat(acceptHeader, formatParam)
-
-                val result = commandExecutor.executeCommand(
-                    parseCommandToArgs("convert ${upload.uploadedFileName()} --to=$format")
-                )
+                val tempFile = storeUploadedFile(body, "convert", ctx.request().getHeader("Content-Type"))
                 
-                logger.info(result.second)
-                ctx.response().putHeader("Content-Type", responseHandler.mapFormatToMimeType(format))
-                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
+                // Update the context's query parameters with the file path
+                val params = ctx.queryParams()
+                params.set("document", "file://${tempFile.toAbsolutePath()}")
+                
+                try {
+                    handleConvertRequest(ctx)
+                } finally {
+                    Files.deleteIfExists(tempFile)
+                }
             } catch (e: Exception) {
-                logger.error("Error handling file upload request", e)
+                logger.error("Error handling content request", e)
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
     }
 
-    private fun parseCommandToArgs(command: String): List<String> {
-        return command.split("\\s+".toRegex()).filter { it.isNotBlank() }
+    private fun getExtensionFromContentType(contentType: String?): String {
+        return when (contentType?.lowercase()) {
+            "application/json" -> ".json"
+            "text/yaml" -> ".yaml"
+            "text/xml" -> ".xml"
+            else -> ".tmp"
+        }
     }
 }
