@@ -6,3 +6,4 @@ target
 /src/main/resources/webroot/assets
 /node_modules
 /client/dist
+/src/main/resources/webroot

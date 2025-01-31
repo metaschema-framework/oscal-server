@@ -561,3 +561,157 @@ paths:
           description: File not found
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+  /api/modules/files:
+    get:
+      operationId: listModuleFiles
+      summary: List all module files
+      responses:
+        '200':
+          description: List of module files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    size:
+                      type: integer
+                    lastModified:
+                      type: string
+                    mimeType:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: uploadModuleFile
+      summary: Upload a module file
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  lastModified:
+                    type: string
+                  mimeType:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/modules/files/{filename}:
+    get:
+      operationId: getModuleFile
+      summary: Get a module file
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      operationId: updateModuleFile
+      summary: Update a module file
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: File updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  lastModified:
+                    type: string
+                  mimeType:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      operationId: deleteModuleFile
+      summary: Delete a module file
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      responses:
+        '204':
+          description: File deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'

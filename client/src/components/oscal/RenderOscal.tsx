@@ -8,6 +8,8 @@ import { RenderBackMatter } from './RenderBackMatter';
 import { RenderImplementedRequirements } from './RenderImplementedRequirements';
 import { RenderComponents } from './RenderComponents';
 import { RenderSystemCharacteristics } from './RenderSystemCharacteristics';
+import { RenderMerge } from './RenderMerge';
+import { RenderModify } from './RenderModify';
 import './RenderOscal.css';
 
 interface RenderOscalProps {
@@ -41,12 +43,12 @@ const renderError = (message: string) => (
   </IonAccordionGroup>
 );
 
-const renderCatalog = (content: Catalog[]) => (
+const renderCatalog = (content: Catalog) => (
   <IonAccordionGroup>
-    {content[0]?.metadata && <RenderMetadata metadata={content[0].metadata} />}
-    {content[0]?.groups && <RenderGroups groups={content[0].groups} />}
-    {content[0]?.controls && <RenderControls controls={content[0].controls} />}
-    {content[0]?.['back-matter'] && <RenderBackMatter backMatter={content[0]['back-matter']} />}
+    {content?.metadata && <RenderMetadata metadata={content.metadata} />}
+    {content?.groups && <RenderGroups groups={content.groups} />}
+    {content?.controls && <RenderControls controls={content.controls} />}
+    {content?.['back-matter'] && <RenderBackMatter backMatter={content['back-matter']} />}
   </IonAccordionGroup>
 );
 
@@ -67,6 +69,8 @@ const renderProfile = (content: Profile) => (
         </div>
       </IonAccordion>
     )}
+    {content.merge && <RenderMerge merge={content.merge} />}
+    {content.modify && <RenderModify modify={content.modify} />}
     {content['back-matter'] && <RenderBackMatter backMatter={content['back-matter']} />}
   </IonAccordionGroup>
 );
@@ -132,7 +136,7 @@ export const RenderOscal: React.FC<RenderOscalProps> = ({ document }) => {
 
   switch (type) {
     case 'catalog':
-      return renderCatalog(content as Catalog[]);
+      return renderCatalog(content as Catalog);
     case 'profile':
       return renderProfile(content as Profile);
     case 'component-definition':

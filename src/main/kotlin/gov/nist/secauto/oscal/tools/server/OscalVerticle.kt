@@ -32,6 +32,7 @@ class OscalVerticle : CoroutineVerticle() {
     private lateinit var responseHandler: ResponseHandler
     private lateinit var requestHandler: RequestHandler
     private lateinit var packageHandler: PackageHandler
+    private lateinit var moduleHandler: ModuleHandler
     private lateinit var serverDir: Path
     private lateinit var packagesDir: Path
     private lateinit var uploadsDir: Path
@@ -65,6 +66,7 @@ class OscalVerticle : CoroutineVerticle() {
         responseHandler = ResponseHandler()
         requestHandler = RequestHandler(urlProcessor, commandExecutor, responseHandler, oscalDir)
         packageHandler = PackageHandler(packagesDir)
+        moduleHandler = ModuleHandler(packagesDir)
         logger.info("Components initialized successfully")
     }
 
@@ -138,6 +140,13 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("getPackageFile").handler { ctx -> packageHandler.handleGetPackageFile(ctx) }
         routerBuilder.operation("updatePackageFile").handler { ctx -> packageHandler.handleUpdatePackageFile(ctx) }
         routerBuilder.operation("deletePackageFile").handler { ctx -> packageHandler.handleDeletePackageFile(ctx) }
+
+        // Handle module operations
+        routerBuilder.operation("listModuleFiles").handler { ctx -> moduleHandler.handleListFiles(ctx) }
+        routerBuilder.operation("uploadModuleFile").handler { ctx -> moduleHandler.handleUploadFile(ctx) }
+        routerBuilder.operation("getModuleFile").handler { ctx -> moduleHandler.handleGetFile(ctx) }
+        routerBuilder.operation("updateModuleFile").handler { ctx -> moduleHandler.handleUpdateFile(ctx) }
+        routerBuilder.operation("deleteModuleFile").handler { ctx -> moduleHandler.handleDeleteFile(ctx) }
         
         // Handle health check
         routerBuilder.operation("healthCheck").handler { ctx -> requestHandler.handleHealthCheck(ctx) }

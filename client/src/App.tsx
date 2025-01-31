@@ -63,9 +63,6 @@ const App: React.FC = () => {
     <IonApp>
       {/* <ChatbotProvider> */}
         <IonReactHashRouter>
-          <IonSplitPane when={false} contentId="main">
-            <Menu />
-
             <IonRouterOutlet id="main">
               <IonRoute path="/" render={() => <Documents />} />
               {/* <IonRoute path="/editor" exact={true} render={() => <Editor />} />
@@ -140,7 +137,6 @@ const App: React.FC = () => {
                 render={() => <ImportExport />}
               /> */}
             </IonRouterOutlet>
-          </IonSplitPane>
         </IonReactHashRouter>
         {/* <ChatbotWindow /> */}
       {/* </ChatbotProvider> */}

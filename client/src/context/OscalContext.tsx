@@ -57,7 +57,7 @@ export const useOscal = create<OscalState>((set, get) => {
 
   return {
     packageId: 'workspace',
-    documentId: 'ssp.json',
+    documentId: undefined,
     setPackage: (packageId: string) => {
       set((state) => ({ ...state, packageId }));
       return true;

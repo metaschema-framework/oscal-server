@@ -1814,7 +1814,7 @@ export interface ControlGroup {
   /**
    * @minItems 1
    */
-  "insert-controls"?: [InsertControls, ...InsertControls[]];
+  "controls"?: Control[];
 }
 /**
  * Specifies which controls to use in the containing context.

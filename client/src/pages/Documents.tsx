@@ -23,6 +23,9 @@ import {
   IonToast,
   IonSelect,
   IonSelectOption,
+  IonSplitPane,
+  IonMenu,
+  IonMenuButton,
 } from "@ionic/react";
 import { 
   documentOutline, 
@@ -31,7 +34,6 @@ import {
   gitCompareOutline,
 } from "ionicons/icons";
 import React, { useEffect, useState } from "react";
-import RenderOscal from '../components/RenderOscal';
 import Search from "../components/common/Search";
 import ImportOscal from "../components/ImportOscal";
 import { useOscal } from "../context/OscalContext";
@@ -39,6 +41,7 @@ import { StorageService } from "../services/storage";
 import PackageSelector from "../components/PackageSelector";
 import { ApiService, ConversionService } from "../services/api";
 import { OscalPackage } from "../types";
+import { RenderOscal } from "../components/oscal/RenderOscal";
 
 interface DocumentEntry {
   id: string;
@@ -46,6 +49,7 @@ interface DocumentEntry {
 
 const Documents: React.FC = () => {
   const { packages, documents, setPackage, setDocumentId, documentId, packageId } = useOscal();
+  const [menuEnabled, setMenuEnabled] = useState(true);
   const router = useIonRouter();
   const [documentList, setDocumentList] = useState<DocumentEntry[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Record<string, any> | null>(null);
@@ -192,8 +196,55 @@ const Documents: React.FC = () => {
   };
 
   return (
-    <IonPage>
-      <IonToast
+    <IonSplitPane contentId="documents-main">
+      <IonMenu contentId="documents-main" side="start">
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Documents</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent>
+          <ImportOscal 
+            onImport={(documentId) => {
+              router.push(`/documents?id=${documentId}`);
+            }}
+          />
+          {loading ? (
+            <IonItem>
+              <IonLabel>
+                <IonSpinner name="dots" /> Loading documents...
+              </IonLabel>
+            </IonItem>
+          ) : (
+            <IonList>
+              {documentList.map(({id}) => (
+                <IonItem 
+                  key={id} 
+                  button 
+                  color={documentId === id ? "primary" : undefined}
+                  onClick={() => {
+                    setDocumentId(id);
+                    router.push(`/documents?id=${id}`);
+                  }}
+                >
+                  <IonIcon icon={documentOutline} slot="start" />
+                  <IonLabel>
+                    {id}
+                  </IonLabel>
+                </IonItem>
+              ))}
+              {documentList.length === 0 && (
+                <IonItem>
+                  <IonLabel color="medium">No documents available in package '{packageId}'. Use the import function above to add documents.</IonLabel>
+                </IonItem>
+              )}
+            </IonList>
+          )}
+        </IonContent>
+      </IonMenu>
+      
+      <IonPage id="documents-main">
+        <IonToast
         isOpen={showToast}
         onDidDismiss={() => setShowToast(false)}
         message={toastMessage}
@@ -203,6 +254,9 @@ const Documents: React.FC = () => {
       />
       <IonHeader>
         <IonToolbar>
+          <IonButtons slot="start">
+            <IonMenuButton />
+          </IonButtons>
           <IonTitle>Documents</IonTitle>
           {selectedDocument && (
             <IonButtons slot="end">
@@ -217,12 +271,13 @@ const Documents: React.FC = () => {
                    handleConvert(e.detail.value)}}
                 interface="popover"
               >
-                <IonSelectOption value="">Convert</IonSelectOption>
-                <IonSelectOption value="json">Convert to JSON</IonSelectOption>
-                <IonSelectOption value="yaml">Conert to YAML</IonSelectOption>
-                <IonSelectOption value="xml">Conert to XML</IonSelectOption>
+                <IonSelectOption disabled value="">Convert</IonSelectOption>
+                <IonSelectOption value="json">to JSON</IonSelectOption>
+                <IonSelectOption value="yaml">to YAML</IonSelectOption>
+                <IonSelectOption value="xml">to XML</IonSelectOption>
               </IonSelect>
-              
+
+
               {/* {selectedDocument.profile && (
                 <IonButton onClick={handleResolveProfile} disabled={resolving}>
                   <IonIcon slot="start" icon={gitCompareOutline} />
@@ -236,49 +291,7 @@ const Documents: React.FC = () => {
       <IonContent>
         <IonGrid>
           <IonRow>
-            {/* Left Column - Document List */}
-            <IonCol size="12" sizeMd="4" style={{ borderRight: '1px solid var(--ion-border-color)' }}>
-              {/* <Search context="Documents" /> */}
-              <ImportOscal 
-                onImport={(documentId) => {
-                  router.push(`/documents?id=${documentId}`);
-                }}
-              />
-              {loading ? (
-                <IonItem>
-                  <IonLabel>
-                    <IonSpinner name="dots" /> Loading documents...
-                  </IonLabel>
-                </IonItem>
-              ) : (
-                <IonList>
-                  {documentList.map(({id}) => (
-                    <IonItem 
-                      key={id} 
-                      button 
-                      color={documentId === id ? "primary" : undefined}
-                      onClick={() => {
-                        setDocumentId(id);
-                        router.push(`/documents?id=${id}`);
-                      }}
-                    >
-                      <IonIcon icon={documentOutline} slot="start" />
-                      <IonLabel>
-                        {id}
-                      </IonLabel>
-                    </IonItem>
-                  ))}
-                  {documentList.length === 0 && (
-                    <IonItem>
-                      <IonLabel color="medium">No documents available in package '{packageId}'. Use the import function above to add documents.</IonLabel>
-                    </IonItem>
-                  )}
-                </IonList>
-              )}
-            </IonCol>
-
-            {/* Right Column - Document Content */}
-            <IonCol size="12" sizeMd="8">
+            <IonCol size="12">
               {documentId && selectedDocument ? (
                 <IonCard>
                   <IonCardHeader>
@@ -293,6 +306,9 @@ const Documents: React.FC = () => {
                       border: '1px solid var(--ion-border-color)',
                       boxShadow: '0 1px 2px var(--ion-color-step-100)'
                     }}>
+                      {(()=>{console.log(selectedDocument);
+                        return <></>
+                      })()}
                     <RenderOscal document={selectedDocument as OscalPackage}/>
                     </div>
                   </IonCardContent>
@@ -324,7 +340,8 @@ const Documents: React.FC = () => {
           </IonRow>
         </IonGrid>
       </IonContent>
-    </IonPage>
+      </IonPage>
+    </IonSplitPane>
   );
 };
 

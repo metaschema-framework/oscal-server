@@ -2,13 +2,10 @@ import React from 'react';
 import { IonAccordion, IonItem, IonLabel, IonList } from '@ionic/react';
 import { Control, Property } from '../../types';
 import { RenderProps } from './RenderProps';
+import { RenderParts } from './RenderParts';
 
 interface RenderControlsProps {
-  controls: (Control | {
-    id: string;
-    title: string;
-    props?: Property[];
-  })[];
+  controls: Control[];
   isNested?: boolean;
 }
 
@@ -23,6 +20,7 @@ export const RenderControls: React.FC<RenderControlsProps> = ({ controls, isNest
             <h2>{control.title}</h2>
             <p>ID: {control.id}</p>
             {control.props && <RenderProps props={control.props} />}
+            {control.parts && <RenderParts parts={control.parts} />}
           </IonLabel>
         </IonItem>
       ))}
