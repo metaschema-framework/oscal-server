@@ -151,10 +151,41 @@ class OscalVerticle : CoroutineVerticle() {
         // Handle health check
         routerBuilder.operation("healthCheck").handler { ctx -> requestHandler.handleHealthCheck(ctx) }
 
-        // Create the router and add static file handler
+        // Create the router
         val router = routerBuilder.createRouter()
+
+        // Configure body handler for direct routes
+        val directRouteBodyHandler = BodyHandler.create()
+            .setBodyLimit(1000000000) // 1GB max body size
+            .setPreallocateBodyBuffer(false)
+
+        // Add direct route handlers for legacy support
+        router.get("/health").handler { ctx -> requestHandler.handleHealthCheck(ctx) }
+        router.post("/validate")
+            .handler(directRouteBodyHandler)
+            .handler { ctx ->
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleValidateRequest(ctx)
+                }
+            }
+        router.post("/convert")
+            .handler(directRouteBodyHandler)
+            .handler { ctx ->
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleConvertRequest(ctx)
+                }
+            }
+        router.post("/resolve-profile")
+            .handler(directRouteBodyHandler)
+            .handler { ctx ->
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleResolveRequest(ctx)
+                }
+            }
+
+        // Add static file handler last
         router.route("/*").handler(StaticHandler.create("webroot"))
-        logger.info("Router created successfully")
+        logger.info("Router created successfully with both API and direct routes")
         return router
     }
 
