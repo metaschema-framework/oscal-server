@@ -39,7 +39,7 @@ jobs:
     - name: Build client
       run: |
         cd client
-        npm i
+        npm ci
         npm run build
         cd ..
   

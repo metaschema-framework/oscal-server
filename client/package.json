@@ -37,6 +37,9 @@
     "uuid": "^11.0.3",
     "zustand": "^5.0.2"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.9.5"
+  },
   "devDependencies": {
     "@capacitor/cli": "6.2.0",
     "@testing-library/dom": ">=7.21.4",
