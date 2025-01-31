@@ -161,25 +161,46 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Add direct route handlers for legacy support
         router.get("/health").handler { ctx -> requestHandler.handleHealthCheck(ctx) }
+        
+        // Validate routes
+        router.get("/validate").handler { ctx ->
+            launch(vertx.dispatcher()) {
+                requestHandler.handleValidateRequest(ctx)
+            }
+        }
         router.post("/validate")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
                 launch(vertx.dispatcher()) {
-                    requestHandler.handleValidateRequest(ctx)
+                    requestHandler.handleValidateFileUpload(ctx)
                 }
             }
+            
+        // Convert routes
+        router.get("/convert").handler { ctx ->
+            launch(vertx.dispatcher()) {
+                requestHandler.handleConvertRequest(ctx)
+            }
+        }
         router.post("/convert")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
                 launch(vertx.dispatcher()) {
-                    requestHandler.handleConvertRequest(ctx)
+                    requestHandler.handleConvertFileUpload(ctx)
                 }
             }
+            
+        // Resolve profile routes
+        router.get("/resolve-profile").handler { ctx ->
+            launch(vertx.dispatcher()) {
+                requestHandler.handleResolveRequest(ctx)
+            }
+        }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
                 launch(vertx.dispatcher()) {
-                    requestHandler.handleResolveRequest(ctx)
+                    requestHandler.handleResolveFileUpload(ctx)
                 }
             }
 
