@@ -6,7 +6,7 @@ const Home: React.FC = () => {
   const links:any = [
     // { path: '/rmf', label: 'Risk Management Walkthrough', icon: shieldCheckmarkOutline,disabled:true },
     // { path: '/editor', label: 'Oscal Editor', icon: codeSlashOutline },
-    { path: '/documents', label: 'Document manager', icon: documentTextOutline },
+    // { path: '/documents', label: 'Document manager', icon: documentTextOutline },
     // { path: '/assistance', label: 'Oscal Assistant', icon: chatbubbleEllipsesOutline },
     // { path: '/import-export', label: 'Import Oscal', icon: flowerOutline },
   ];
