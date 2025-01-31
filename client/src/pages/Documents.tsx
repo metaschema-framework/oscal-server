@@ -18,8 +18,18 @@ import {
   IonToolbar,
   useIonRouter,
   IonSpinner,
+  IonButton,
+  IonButtons,
+  IonToast,
+  IonSelect,
+  IonSelectOption,
 } from "@ionic/react";
-import { documentOutline } from "ionicons/icons";
+import { 
+  documentOutline, 
+  checkmarkCircleOutline, 
+  swapHorizontalOutline,
+  gitCompareOutline,
+} from "ionicons/icons";
 import React, { useEffect, useState } from "react";
 import RenderOscal from '../components/RenderOscal';
 import Search from "../components/common/Search";
@@ -28,6 +38,7 @@ import { useOscal } from "../context/OscalContext";
 import { StorageService } from "../services/storage";
 import PackageSelector from "../components/PackageSelector";
 import { ApiService, ConversionService } from "../services/api";
+import { OscalPackage } from "../types";
 
 interface DocumentEntry {
   id: string;
@@ -39,6 +50,12 @@ const Documents: React.FC = () => {
   const [documentList, setDocumentList] = useState<DocumentEntry[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [toastColor, setToastColor] = useState<string>("success");
+  const [showToast, setShowToast] = useState(false);
 
   // Load document list when package changes
   useEffect(() => {
@@ -104,48 +121,116 @@ const Documents: React.FC = () => {
     }
   }, [setDocumentId, documentId]);
 
-  const getDocumentTitle = (doc: Record<string, any>) => {
-    // Try to determine title from OSCAL content first
-    if (doc.catalog?.metadata?.title) return doc.catalog.metadata.title;
-    if (doc.profile?.metadata?.title) return doc.profile.metadata.title;
-    if (doc['component-definition']?.metadata?.title) return doc['component-definition'].metadata.title;
-    if (doc['system-security-plan']?.metadata?.title) return doc['system-security-plan'].metadata.title;
-    if (doc['assessment-plan']?.metadata?.title) return doc['assessment-plan'].metadata.title;
-    if (doc['assessment-results']?.metadata?.title) return doc['assessment-results'].metadata.title;
-    if (doc['plan-of-action-and-milestones']?.metadata?.title) return doc['plan-of-action-and-milestones'].metadata.title;
+
+  const handleValidate = async () => {
+    if (!selectedDocument || !documentId) return;
     
-    // Fallback to direct title if available
-    if (doc.catalog?.title) return doc.catalog.title;
-    if (doc.profile?.title) return doc.profile.title;
-    if (doc['component-definition']?.title) return doc['component-definition'].title;
-    if (doc['system-security-plan']?.title) return doc['system-security-plan'].title;
-    if (doc['assessment-plan']?.title) return doc['assessment-plan'].title;
-    if (doc['assessment-results']?.title) return doc['assessment-results'].title;
-    if (doc['plan-of-action-and-milestones']?.title) return doc['plan-of-action-and-milestones'].title;
-    
-    // Last fallback
-    if (doc.metadata?.title) return doc.metadata.title;
-    
-    return 'Untitled Document';
+    setValidating(true);
+    try {
+      await ApiService.validatePackageDocument(packageId, documentId);
+      setToastColor('success')
+      setToastMessage("Document validation successful");
+      setShowToast(true);
+    } catch (error) {
+      setToastColor('danger')
+      setToastMessage(`Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowToast(true);
+    } finally {
+      setValidating(false);
+    }
   };
 
-  const getDocumentType = (doc: Record<string, any>) => {
-    if (doc.catalog) return 'Catalog';
-    if (doc.profile) return 'Profile';
-    if (doc['component-definition']) return 'Component Definition';
-    if (doc['system-security-plan']) return 'System Security Plan';
-    if (doc['assessment-plan']) return 'Assessment Plan';
-    if (doc['assessment-results']) return 'Assessment Results';
-    if (doc['plan-of-action-and-milestones']) return 'Plan of Action and Milestones';
-    return 'Unknown Type';
+  const handleConvert = async (targetFormat:string) => {
+    if (!selectedDocument || !documentId) return;
+    
+    setConverting(true);
+    try {
+      const convertedDocument = await ConversionService.convertPackageDocument(packageId, documentId,targetFormat);
+      const url = window.URL.createObjectURL(new Blob([convertedDocument]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${documentId.split('.')[0]}.${targetFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setToastMessage("Document converted successfully");
+      setShowToast(true);
+    } catch (error) {
+      setToastMessage(`Conversion error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowToast(true);
+    } finally {
+      setConverting(false);
+    }
   };
 
+  const handleResolveProfile = async () => {
+    if (!selectedDocument || !documentId) return;
+    
+    setResolving(true);
+    try {
+      const format = documentId.split('.').pop() || 'json';
+      let content = await ApiService.getPackageFile(packageId, documentId);
+      const resolved = await ApiService.resolveProfile(content, format);
+      const blob = new Blob([resolved], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resolved-${documentId}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setToastMessage("Profile resolved successfully");
+      setShowToast(true);
+    } catch (error) {
+      setToastMessage(`Profile resolution error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowToast(true);
+    } finally {
+      setResolving(false);
+    }
+  };
 
   return (
     <IonPage>
+      <IonToast
+        isOpen={showToast}
+        onDidDismiss={() => setShowToast(false)}
+        message={toastMessage}
+        color={toastColor}
+        duration={3000}
+        position="bottom"
+      />
       <IonHeader>
         <IonToolbar>
           <IonTitle>Documents</IonTitle>
+          {selectedDocument && (
+            <IonButtons slot="end">
+              <IonButton onClick={handleValidate} disabled={validating}>
+                <IonIcon slot="start" icon={checkmarkCircleOutline} />
+                {validating ? 'Validating...' : 'Validate'}
+              </IonButton>
+              
+              <IonSelect 
+                value={""}
+                onIonChange={e => {;
+                   handleConvert(e.detail.value)}}
+                interface="popover"
+              >
+                <IonSelectOption value="">Convert</IonSelectOption>
+                <IonSelectOption value="json">Convert to JSON</IonSelectOption>
+                <IonSelectOption value="yaml">Conert to YAML</IonSelectOption>
+                <IonSelectOption value="xml">Conert to XML</IonSelectOption>
+              </IonSelect>
+              
+              {/* {selectedDocument.profile && (
+                <IonButton onClick={handleResolveProfile} disabled={resolving}>
+                  <IonIcon slot="start" icon={gitCompareOutline} />
+                  {resolving ? 'Resolving...' : 'Resolve Profile'}
+                </IonButton>
+              )} */}
+            </IonButtons>
+          )}
         </IonToolbar>
       </IonHeader>
       <IonContent>
@@ -208,7 +293,7 @@ const Documents: React.FC = () => {
                       border: '1px solid var(--ion-border-color)',
                       boxShadow: '0 1px 2px var(--ion-color-step-100)'
                     }}>
-                    <RenderOscal document={selectedDocument}/>
+                    <RenderOscal document={selectedDocument as OscalPackage}/>
                     </div>
                   </IonCardContent>
                 </IonCard>

@@ -8,9 +8,23 @@ interface PackageFile {
 interface ConversionService {
   convertFile: (file: File, format: string) => Promise<any>;
   exportFile: (data: any, format: string) => Promise<Blob>;
+  convertPackageDocument:(packageId:string,documentId:string,format:string)=>Promise<string>;
 }
 
 export const ConversionService: ConversionService = {
+
+  convertPackageDocument: async (packageId: string, documentId: string,format:string): Promise<any> => {
+    const response = await fetch(`/api/convert?document=file://~/.oscal/packages/${packageId}/${documentId}&format=${format}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Validation failed: ${errorText}`);
+    }
+
+    return response.text();
+  },
   convertFile: async (file: File, format: string): Promise<any> => {
     const content = await file.text();
     const contentType = getContentTypeFromFile(file);
@@ -58,6 +72,55 @@ interface PackageFile {
 }
 
 export const ApiService = {
+  // Validate an OSCAL document
+  validateDocument: async (content: string, format: string): Promise<any> => {
+    const response = await fetch(`/api/validate?format=${format}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': getContentTypeFromFormat(format),
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Validation failed: ${errorText}`);
+    }
+
+    return response.json();
+  },
+
+  validatePackageDocument: async (packageId: string, documentId: string): Promise<any> => {
+    const response = await fetch(`/api/validate?document=file://~/.oscal/packages/${packageId}/${documentId}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Validation failed: ${errorText}`);
+    }
+
+    return response.json();
+  },
+
+  // Resolve a profile
+  resolveProfile: async (content: string, format: string): Promise<string> => {
+    const response = await fetch(`/api/resolve-profile?format=${format}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': getContentTypeFromFormat(format),
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Profile resolution failed: ${errorText}`);
+    }
+
+    return response.text();
+  },
+
   // List all files in a package
   listPackageFiles: async (packageId: string): Promise<PackageFile[]> => {
     const response = await fetch(`/api/packages/${packageId}/files`);
@@ -125,6 +188,20 @@ export const ApiService = {
     }
   },
 };
+
+function getContentTypeFromFormat(format: string): string {
+  switch (format.toLowerCase()) {
+    case 'json':
+      return 'application/json';
+    case 'yaml':
+    case 'yml':
+      return 'text/yaml';
+    case 'xml':
+      return 'text/xml';
+    default:
+      return 'application/octet-stream';
+  }
+}
 
 function getContentTypeFromFile(file: File): string {
   const extension = file.name.split('.').pop()?.toLowerCase();

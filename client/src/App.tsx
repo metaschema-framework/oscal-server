@@ -67,14 +67,14 @@ const App: React.FC = () => {
             <Menu />
 
             <IonRouterOutlet id="main">
-              <IonRoute path="/" exact={true} render={() => <Home />} />
-              <IonRoute path="/editor" exact={true} render={() => <Editor />} />
+              <IonRoute path="/" render={() => <Documents />} />
+              {/* <IonRoute path="/editor" exact={true} render={() => <Editor />} />
               <IonRoute
                 path="/edit/:type"
                 exact={true}
                 render={() => <EditPage />}
-              />
-              <IonRoute
+              /> */}
+              {/* <IonRoute
                 path="/prepare"
                 exact={true}
                 render={() => <Prepare />}
@@ -128,8 +128,8 @@ const App: React.FC = () => {
                 path="/monitor"
                 exact={false}
                 render={() => <Monitor />}
-              />
-              <IonRoute
+              /> */}
+              {/* <IonRoute
                 path="/documents"
                 exact={false}
                 render={() => <Documents />}
@@ -138,7 +138,7 @@ const App: React.FC = () => {
                 path="/import-export"
                 exact={false}
                 render={() => <ImportExport />}
-              />
+              /> */}
             </IonRouterOutlet>
           </IonSplitPane>
         </IonReactHashRouter>

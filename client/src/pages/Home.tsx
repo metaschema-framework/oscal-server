@@ -1,14 +1,14 @@
 import { IonContent, IonPage, IonList, IonItem, IonLabel, IonIcon } from '@ionic/react';
-import { shieldCheckmarkOutline, codeSlashOutline, documentTextOutline, chatbubbleEllipsesOutline, flower, flowerOutline } from 'ionicons/icons';
+import { shieldCheckmarkOutline, codeSlashOutline, documentTextOutline, chatbubbleEllipsesOutline, flower, flowerOutline, swapVertical, lockClosed, returnDownBack, transgender, trainSharp } from 'ionicons/icons';
 import PageHeader from '../components/common/PageHeader';
 
 const Home: React.FC = () => {
   const links:any = [
-    { path: '/rmf', label: 'Risk Management Walkthrough', icon: shieldCheckmarkOutline,disabled:true },
-    { path: '/editor', label: 'Oscal Editor', icon: codeSlashOutline },
+    // { path: '/rmf', label: 'Risk Management Walkthrough', icon: shieldCheckmarkOutline,disabled:true },
+    // { path: '/editor', label: 'Oscal Editor', icon: codeSlashOutline },
     { path: '/documents', label: 'Document manager', icon: documentTextOutline },
-    { path: '/assistance', label: 'Oscal Assistant', icon: chatbubbleEllipsesOutline },
-    { path: '/import-export', label: 'Import Oscal', icon: flowerOutline },
+    // { path: '/assistance', label: 'Oscal Assistant', icon: chatbubbleEllipsesOutline },
+    // { path: '/import-export', label: 'Import Oscal', icon: flowerOutline },
   ];
 
   return (

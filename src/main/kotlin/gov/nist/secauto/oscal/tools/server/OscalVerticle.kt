@@ -90,16 +90,24 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Configure upload operations with direct body content
         routerBuilder.operation("validateUpload").handler { ctx -> 
-            requestHandler.handleValidateFileUpload(ctx) 
+            launch(vertx.dispatcher()) {
+                requestHandler.handleValidateFileUpload(ctx)
+            }
         }
         routerBuilder.operation("resolveUpload").handler { ctx -> 
-            requestHandler.handleResolveFileUpload(ctx) 
+            launch(vertx.dispatcher()) {
+                requestHandler.handleResolveFileUpload(ctx)
+            }
         }
         routerBuilder.operation("convertUpload").handler { ctx -> 
-            requestHandler.handleConvertFileUpload(ctx) 
+            launch(vertx.dispatcher()) {
+                requestHandler.handleConvertFileUpload(ctx)
+            }
         }
         routerBuilder.operation("queryUpload").handler { ctx -> 
-            requestHandler.handleQueryFileUpload(ctx) 
+            launch(vertx.dispatcher()) {
+                requestHandler.handleQueryFileUpload(ctx)
+            }
         }
         
         // Handle regular operations with suspend functions

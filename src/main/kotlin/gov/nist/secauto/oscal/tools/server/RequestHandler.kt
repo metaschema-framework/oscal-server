@@ -47,21 +47,26 @@ class RequestHandler(
             val encodedContent = ctx.queryParam("document").firstOrNull()
             val expression = ctx.queryParam("expression").firstOrNull()
             val module = ctx.queryParam("module").firstOrNull()
-            if (encodedContent != null && expression != null && module != null) {
-                val content = urlProcessor.processUrl(encodedContent)
-                val args = mutableListOf("metaschema", "metapath", "eval")
-                args.add("-i")
-                args.add(content)
-                args.add("-e")
-                args.add(expression)
-                args.add("-m")
-                args.add(module)
-                val result = commandExecutor.executeCommand(args)
-                logger.info(result.second)
-                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
-            } else {
-                responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
+            
+            if (encodedContent == null || expression == null || module == null) {
+                responseHandler.sendErrorResponse(ctx, 400, "Missing required parameters")
+                return
             }
+            
+            val content = urlProcessor.processUrl(encodedContent)
+            val args = mutableListOf("metaschema", "metapath", "eval")
+            args.add("-i")
+            args.add(content)
+            args.add("-e")
+
+            args.add(expression)
+            args.add("-m")
+            args.add(module)
+            
+            val result = commandExecutor.executeCommand(args)
+            logger.info(result.second)
+            ctx.response().putHeader("Content-Type", "application/json")
+            responseHandler.sendSuccessResponse(ctx, result.first, result.second)
         } catch (e: Exception) {
             logger.error("Error handling request", e)
             responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
@@ -75,32 +80,53 @@ class RequestHandler(
             val encodedModule = ctx.queryParam("module").firstOrNull()
             val constraint = ctx.queryParam("constraint")
             val flags = ctx.queryParam("flags")
-            if (encodedContent != null) {
-                val content = urlProcessor.processUrl(encodedContent)
-                val args = mutableListOf("validate")
-                encodedModule?.let { module ->
-                    if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                        args[0] = "metaschema"
-                        args.add("validate")
-                    } else {
-                        args[0] = "metaschema"
-                        args.add("validate-content")
-                    }
-                }
-                args.add(content)
-                args.add("--show-stack-trace")
-                constraint.forEach { constraint_document ->
-                    args.add("-c")
-                    args.add(urlProcessor.processUrl(constraint_document))
-                }
-                flags.forEach { flag ->
-                    args.add(responseHandler.flagToParam(flag))
-                }
-                val result = commandExecutor.executeCommand(args)
-                logger.info(result.second)
-                responseHandler.sendSuccessResponse(ctx, result.first, result.second)
-            } else {
+            
+            if (encodedContent == null) {
                 responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
+                return
+            }
+            
+            val content = urlProcessor.processUrl(encodedContent)
+            
+            // Generate SARIF output file path
+            
+            val args = mutableListOf("validate")
+            encodedModule?.let { module ->
+                if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
+                    args[0] = "metaschema"
+                    args.add("validate")
+                } else {
+                    args[0] = "metaschema"
+                    args.add("validate-content")
+                }
+            }
+            args.add(content)
+            
+            constraint.forEach { constraint_document ->
+                args.add("-c")
+                args.add(urlProcessor.processUrl(constraint_document))
+            }
+            flags.forEach { flag ->
+                args.add(responseHandler.flagToParam(flag))
+            }
+            
+
+            try {
+                val result = commandExecutor.executeCommand(args)
+                
+                // Read SARIF output if it exists
+                val sarifContent = if (Files.exists(of(result.second))) {
+                    Files.readString(of(result.second))
+                } else {
+                    // If SARIF file wasn't created, return command output
+                    result.second
+                }
+                
+                ctx.response().putHeader("Content-Type", "application/sarif+json")
+                responseHandler.sendSuccessResponse(ctx, result.first, sarifContent)
+                Files.deleteIfExists(of(result.second))
+            } finally {
+                // Clean up temporary SARIF file
             }
         } catch (e: Exception) {
             logger.error("Error handling request", e)
@@ -172,13 +198,22 @@ class RequestHandler(
         }
     }
 
+    private fun getExtensionFromContentType(contentType: String?): String {
+        return when (contentType?.lowercase()) {
+            "application/json" -> ".json"
+            "text/yaml" -> ".yaml"
+            "text/xml" -> ".xml"
+            else -> ".tmp"
+        }
+    }
+
     private suspend fun storeUploadedFile(body: String, prefix: String, contentType: String): Path {
         val tempFile = of(oscalDir.toString(), "$prefix-${System.nanoTime()}${getExtensionFromContentType(contentType)}")
         Files.writeString(tempFile, body)
         return tempFile
     }
 
-    fun handleValidateFileUpload(ctx: RoutingContext) {
+    suspend fun handleValidateFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling validate content request")
@@ -207,7 +242,7 @@ class RequestHandler(
         }
     }
 
-    fun handleQueryFileUpload(ctx: RoutingContext) {
+    suspend fun handleQueryFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling query content request")
@@ -236,7 +271,7 @@ class RequestHandler(
         }
     }
 
-    fun handleResolveFileUpload(ctx: RoutingContext) {
+    suspend fun handleResolveFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling resolve content request")
@@ -265,7 +300,7 @@ class RequestHandler(
         }
     }
 
-    fun handleConvertFileUpload(ctx: RoutingContext) {
+    suspend fun handleConvertFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling convert content request")
@@ -294,12 +329,4 @@ class RequestHandler(
         }
     }
 
-    private fun getExtensionFromContentType(contentType: String?): String {
-        return when (contentType?.lowercase()) {
-            "application/json" -> ".json"
-            "text/yaml" -> ".yaml"
-            "text/xml" -> ".xml"
-            else -> ".tmp"
-        }
-    }
 }

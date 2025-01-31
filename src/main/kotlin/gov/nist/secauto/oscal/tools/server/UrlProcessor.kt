@@ -35,16 +35,22 @@ class UrlProcessor(private val allowedDirs: List<Path>) {
     private fun processFileUrl(url: String): String {
         try {
             val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
+            // Replace ~ with home directory
+            val expandedPath = if (decodedPath.startsWith("~")) {
+                System.getProperty("user.home") + decodedPath.substring(1)
+            } else {
+                decodedPath
+            }
             val normalizedPath = if (System.getProperty("os.name").lowercase().contains("win")) {
                 // Windows-specific handling
-                val winPath = if (decodedPath.startsWith("/")) {
-                    decodedPath.substring(1).replace('/', '\\')
+                val winPath = if (expandedPath.startsWith("/")) {
+                    expandedPath.substring(1).replace('/', '\\')
                 } else {
-                    decodedPath.replace('/', '\\')
+                    expandedPath.replace('/', '\\')
                 }
                 Paths.get(winPath).normalize().toAbsolutePath()
             } else {
-                Paths.get(decodedPath).normalize().toAbsolutePath()
+                Paths.get(expandedPath).normalize().toAbsolutePath()
             }
 
             // Check for directory traversal attempts
