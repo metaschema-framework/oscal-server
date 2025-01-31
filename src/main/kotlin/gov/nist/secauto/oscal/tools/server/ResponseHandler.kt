@@ -23,6 +23,7 @@ class ResponseHandler {
                         val jsonOutput = JsonObject(output)
                         ctx.response()
                             .setStatusCode(200)
+                            .putHeader("Exit-Code", exitStatus.exitCode.toString())
                             .end(jsonOutput.encode())
                     } catch (e: Exception) {
                         // If parsing fails, send as plain text
@@ -30,6 +31,7 @@ class ResponseHandler {
                         ctx.response()
                             .setStatusCode(200)
                             .putHeader("Content-Type", "text/plain")
+                            .putHeader("Exit-Code", exitStatus.exitCode.toString())
                             .end(output)
                     }
                 }
@@ -37,6 +39,7 @@ class ResponseHandler {
                     // For non-JSON responses, send as is with the already set Content-Type
                     ctx.response()
                         .setStatusCode(200)
+                        .putHeader("Exit-Code", exitStatus.exitCode.toString())
                         .end(output)
                 }
             }
