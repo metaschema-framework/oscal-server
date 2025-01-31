@@ -33,16 +33,15 @@ jobs:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: client/package-lock.json
-
+    - name: Clean with Maven
+      run: mvn clean
+  
     - name: Build client
       run: |
         cd client
         npm ci
         npm run build
         cd ..
-
-    - name: Clean with Maven
-      run: mvn clean
   
     - name: Compile with Maven
       run: mvn compile
