@@ -106,21 +106,27 @@ class DirectoryManager {
 
         val envPath = System.getenv("OSCAL_SERVER_PATH")
         if (!envPath.isNullOrBlank()) {
-            val paths = envPath.split(File.pathSeparator)
-            for (dir in paths) {
-                try {
-                    val expandedDir = expandHomeDirectory(dir.trim())
-                    val path = Paths.get(expandedDir).normalize().toAbsolutePath()
-                    
-                    // Validate the directory
-                    validateDirectory(path)
-                    
-                    // Add to allowed directories if validation passes
-                    allowedDirs.add(path)
-                    logger.info("Added allowed directory from OSCAL_SERVER_PATH: $path")
-                } catch (e: Exception) {
-                    logger.error("Invalid directory in OSCAL_SERVER_PATH: $dir", e)
-                    throw SecurityException("Invalid directory configuration: $dir", e)
+            if (envPath.trim() == "*") {
+                logger.warn("OSCAL_SERVER_PATH set to '*' - all directories will be accessible")
+                // Add root directory to allow all paths
+                allowedDirs.add(Paths.get("/").toAbsolutePath())
+            } else {
+                val paths = envPath.split(File.pathSeparator)
+                for (dir in paths) {
+                    try {
+                        val expandedDir = expandHomeDirectory(dir.trim())
+                        val path = Paths.get(expandedDir).normalize().toAbsolutePath()
+                        
+                        // Validate the directory
+                        validateDirectory(path)
+                        
+                        // Add to allowed directories if validation passes
+                        allowedDirs.add(path)
+                        logger.info("Added allowed directory from OSCAL_SERVER_PATH: $path")
+                    } catch (e: Exception) {
+                        logger.error("Invalid directory in OSCAL_SERVER_PATH: $dir", e)
+                        throw SecurityException("Invalid directory configuration: $dir", e)
+                    }
                 }
             }
         } else {
@@ -135,15 +141,29 @@ class DirectoryManager {
     }
 
     private fun validateDirectory(path: Path) {
-        when {
-            !Files.exists(path) -> 
-                throw SecurityException("Directory does not exist: $path")
-            !Files.isDirectory(path) -> 
-                throw SecurityException("Path is not a directory: $path")
-            !Files.isReadable(path) -> 
-                throw SecurityException("Directory is not readable: $path")
-            path.startsWith(oscalDir) && !path.equals(oscalDir) && !path.equals(packagesDir) && !path.equals(uploadsDir) -> 
-                throw SecurityException("Security violation: Only ~/.oscal and its designated subdirectories are allowed")
+        // Skip strict validation if root directory is allowed (OSCAL_SERVER_PATH=*)
+        if (allowedDirs.any { it == Paths.get("/").toAbsolutePath() }) {
+            // Only check if directory exists and is readable
+            when {
+                !Files.exists(path) -> 
+                    throw SecurityException("Directory does not exist: $path")
+                !Files.isDirectory(path) -> 
+                    throw SecurityException("Path is not a directory: $path")
+                !Files.isReadable(path) -> 
+                    throw SecurityException("Directory is not readable: $path")
+            }
+        } else {
+            // Full validation for normal mode
+            when {
+                !Files.exists(path) -> 
+                    throw SecurityException("Directory does not exist: $path")
+                !Files.isDirectory(path) -> 
+                    throw SecurityException("Path is not a directory: $path")
+                !Files.isReadable(path) -> 
+                    throw SecurityException("Directory is not readable: $path")
+                path.startsWith(oscalDir) && !path.equals(oscalDir) && !path.equals(packagesDir) && !path.equals(uploadsDir) -> 
+                    throw SecurityException("Security violation: Only ~/.oscal and its designated subdirectories are allowed")
+            }
         }
     }
 
