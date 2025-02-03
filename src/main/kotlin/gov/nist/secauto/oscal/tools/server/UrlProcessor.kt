@@ -1,15 +1,9 @@
-/*
- * SPDX-FileCopyrightText: none
- * SPDX-License-Identifier: CC0-1.0
- */
-
 package gov.nist.secauto.oscal.tools.server
 
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.Files
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 
@@ -18,13 +12,9 @@ class UrlProcessor(private val allowedDirs: List<Path>) {
 
     fun processUrl(url: String): String {
         return when {
-            url.startsWith("https://") -> {
-                // HTTPS URLs are allowed as-is
-                url
-            }
-            url.startsWith("file://") -> {
-                processFileUrl(url)
-            }
+            url.startsWith("https://") -> url
+            url.startsWith("file://") -> processFileUrl(url)
+            isLocalPath(url) -> processFileUrl("file://$url")
             else -> {
                 logger.error("Invalid URL scheme: $url")
                 throw SecurityException("Only https:// URLs or allowed local files are permitted.")
@@ -32,17 +22,25 @@ class UrlProcessor(private val allowedDirs: List<Path>) {
         }
     }
 
+    private fun isLocalPath(path: String): Boolean {
+        return path.matches("""^[a-zA-Z]:[/\\].*|/.*|~.*|\w+[/\\].*$""".toRegex())
+    }
+
     private fun processFileUrl(url: String): String {
         try {
-            val decodedPath = URLDecoder.decode(url.substring(7), StandardCharsets.UTF_8.name())
-            // Replace ~ with home directory
+            val filePrefix = "file://"
+            val decodedPath = URLDecoder.decode(
+                if (url.startsWith(filePrefix)) url.substring(filePrefix.length) else url,
+                StandardCharsets.UTF_8.name()
+            )
+            
             val expandedPath = if (decodedPath.startsWith("~")) {
                 System.getProperty("user.home") + decodedPath.substring(1)
             } else {
                 decodedPath
             }
+
             val normalizedPath = if (System.getProperty("os.name").lowercase().contains("win")) {
-                // Windows-specific handling
                 val winPath = if (expandedPath.startsWith("/")) {
                     expandedPath.substring(1).replace('/', '\\')
                 } else {
@@ -53,13 +51,11 @@ class UrlProcessor(private val allowedDirs: List<Path>) {
                 Paths.get(expandedPath).normalize().toAbsolutePath()
             }
 
-            // Check for directory traversal attempts
             val canonicalPath = normalizedPath.toFile().canonicalPath
             if (canonicalPath != normalizedPath.toString()) {
                 throw SecurityException("Potential directory traversal detected")
             }
 
-            // Verify path is under allowed directories
             if (!allowedDirs.any { allowedDir -> normalizedPath.startsWith(allowedDir) }) {
                 throw SecurityException("Access denied: File is not in an allowed directory: $normalizedPath")
             }
