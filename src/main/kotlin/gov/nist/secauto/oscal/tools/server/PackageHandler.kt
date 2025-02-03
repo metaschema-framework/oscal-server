@@ -18,22 +18,21 @@ import java.time.format.DateTimeFormatter
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.fileSize
 import kotlin.io.path.getLastModifiedTime
-
 class PackageHandler(private val packagesDir: Path) {
     private val logger: Logger = LogManager.getLogger(PackageHandler::class.java)
+
+    private fun ensurePackageDirectory(packageId: String): Path {
+        val packageDir = packagesDir.resolve(packageId)
+        if (!Files.exists(packageDir)) {
+            Files.createDirectories(packageDir)
+        }
+        return packageDir
+    }
 
     fun handleListPackageFiles(ctx: RoutingContext) {
         try {
             val packageId = ctx.pathParam("packageId")
-            val packageDir = packagesDir.resolve(packageId)
-
-            if (!Files.exists(packageDir)) {
-                ctx.response()
-                    .setStatusCode(404)
-                    .putHeader("Content-Type", "application/json")
-                    .end(JsonObject().put("error", "Package not found").encode())
-                return
-            }
+            val packageDir = ensurePackageDirectory(packageId)
 
             val files = Files.list(packageDir).use { paths ->
                 paths.map { path ->
@@ -61,11 +60,7 @@ class PackageHandler(private val packagesDir: Path) {
     fun handleUploadPackageFile(ctx: RoutingContext) {
         try {
             val packageId = ctx.pathParam("packageId")
-            val packageDir = packagesDir.resolve(packageId)
-            // Create package directory if it doesn't exist
-            if (!Files.exists(packageDir)) {
-                Files.createDirectories(packageDir)
-            }
+            val packageDir = ensurePackageDirectory(packageId)
 
             logger.info("Handling content upload for package $packageId")
             val body = ctx.body().asString()
@@ -85,24 +80,14 @@ class PackageHandler(private val packagesDir: Path) {
             // Handle content based on content type
             when (contentType?.lowercase()) {
                 "application/json" -> {
-                    // Parse and preserve root level object structure for JSON
                     val jsonObject = JsonObject(body)
                     val rootKey = jsonObject.fieldNames().first()
                     val wrappedContent = JsonObject().put(rootKey, jsonObject.getJsonObject(rootKey))
                     Files.write(targetPath, wrappedContent.encode().toByteArray())
                 }
-                "text/yaml", "application/yaml", "application/x-yaml" -> {
-                    // Store YAML content as-is
-                    Files.write(targetPath, body.toByteArray())
-                }
-                "text/xml", "application/xml" -> {
-                    // Store XML content as-is
-                    Files.write(targetPath, body.toByteArray())
-                }
-                else -> {
-                    // Default to storing content as-is
-                    Files.write(targetPath, body.toByteArray())
-                }
+                "text/yaml", "application/yaml", "application/x-yaml",
+                "text/xml", "application/xml" -> Files.write(targetPath, body.toByteArray())
+                else -> Files.write(targetPath, body.toByteArray())
             }
 
             val response = JsonObject()
@@ -128,7 +113,8 @@ class PackageHandler(private val packagesDir: Path) {
         try {
             val packageId = ctx.pathParam("packageId")
             val filename = ctx.pathParam("filename")
-            val filePath = packagesDir.resolve(packageId).resolve(filename)
+            val packageDir = ensurePackageDirectory(packageId)
+            val filePath = packageDir.resolve(filename)
 
             if (!Files.exists(filePath)) {
                 ctx.response()
@@ -156,7 +142,8 @@ class PackageHandler(private val packagesDir: Path) {
         try {
             val packageId = ctx.pathParam("packageId")
             val filename = ctx.pathParam("filename")
-            val filePath = packagesDir.resolve(packageId).resolve(filename)
+            val packageDir = ensurePackageDirectory(packageId)
+            val filePath = packageDir.resolve(filename)
 
             logger.info("Handling content update for package $packageId, file $filename")
             val body = ctx.body().asString()
@@ -170,28 +157,18 @@ class PackageHandler(private val packagesDir: Path) {
             }
 
             val contentType = ctx.request().getHeader("Content-Type")
-            // Handle content based on content type
             when (contentType?.lowercase()) {
                 "application/json" -> {
-                    // Parse and preserve root level object structure for JSON
                     val jsonObject = JsonObject(body)
                     val rootKey = jsonObject.fieldNames().first()
                     val wrappedContent = JsonObject().put(rootKey, jsonObject.getJsonObject(rootKey))
                     Files.write(filePath, wrappedContent.encode().toByteArray())
                 }
-                "text/yaml", "application/yaml", "application/x-yaml" -> {
-                    // Store YAML content as-is
-                    Files.write(filePath, body.toByteArray())
-                }
-                "text/xml", "application/xml" -> {
-                    // Store XML content as-is
-                    Files.write(filePath, body.toByteArray())
-                }
-                else -> {
-                    // Default to storing content as-is
-                    Files.write(filePath, body.toByteArray())
-                }
+                "text/yaml", "application/yaml", "application/x-yaml",
+                "text/xml", "application/xml" -> Files.write(filePath, body.toByteArray())
+                else -> Files.write(filePath, body.toByteArray())
             }
+
             val response = JsonObject()
                 .put("name", filePath.fileName.toString())
                 .put("size", Files.size(filePath))
@@ -215,7 +192,8 @@ class PackageHandler(private val packagesDir: Path) {
         try {
             val packageId = ctx.pathParam("packageId")
             val filename = ctx.pathParam("filename")
-            val filePath = packagesDir.resolve(packageId).resolve(filename)
+            val packageDir = ensurePackageDirectory(packageId)
+            val filePath = packageDir.resolve(filename)
 
             if (!Files.exists(filePath)) {
                 ctx.response()
@@ -227,8 +205,7 @@ class PackageHandler(private val packagesDir: Path) {
 
             Files.delete(filePath)
 
-            // If package directory is empty, delete it too
-            val packageDir = filePath.parent
+            // If package directory is empty, delete it
             if (Files.list(packageDir).use { it.count() } == 0L) {
                 Files.delete(packageDir)
             }
