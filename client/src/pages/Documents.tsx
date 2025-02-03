@@ -78,7 +78,7 @@ const Documents: React.FC = () => {
     };
 
     loadDocuments();
-  }, [documents, packageId]);
+  }, [documents, packageId,documentId]);
 
   // Load selected document content when documentId changes
   useEffect(() => {
