@@ -41,6 +41,75 @@ class TestOscalVerticle {
         }
     }
 
+    @Test
+    fun test_performance_validation(testContext: TestContext) {
+        val async = testContext.async()
+
+        try {
+            // Download base test file
+            val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            val baseFile = downloadToTempFile(url, "perf-base", ".xml")
+            
+            // Create 20 slightly modified copies
+            val testFiles = (1..20).map { index ->
+                val content = Files.readString(baseFile)
+                val modified = content.replace(
+                    "<title>Enterprise Logging and Auditing System Security Plan</title>",
+                    "<title>Enterprise Logging and Auditing System Security Plan $index</title>"
+                )
+                val tempFile = Files.createTempFile(baseFile.parent, "perf-test-$index", ".xml")
+                Files.writeString(tempFile, modified)
+                tempFile
+            }
+
+            var totalTime = 0L
+            var successCount = 0
+            var currentIndex = 0
+
+            fun validateNext() {
+                if (currentIndex >= testFiles.size) {
+                    // All files processed - report results
+                    val avgTime = totalTime / successCount
+                    logger.info("Performance Test Results:")
+                    logger.info("Total files: ${testFiles.size}")
+                    logger.info("Successful validations: $successCount")
+                    logger.info("Average time per validation: ${avgTime}ms")
+                    logger.info("Total time: ${totalTime}ms")
+                    
+                    testContext.assertTrue(successCount > 0, "At least one validation should succeed")
+                    async.complete()
+                    return
+                }
+
+                val startTime = System.currentTimeMillis()
+                val fileUri = testFiles[currentIndex].toUri().toString()
+
+                webClient.get("/validate")
+                    .addQueryParam("document", fileUri)
+                    .send { ar ->
+                        if (ar.succeeded()) {
+                            val response = ar.result()
+                            if (response.statusCode() == 200) {
+                                val endTime = System.currentTimeMillis()
+                                totalTime += (endTime - startTime)
+                                successCount++
+                                logger.info("Validated file ${currentIndex + 1}/20 in ${endTime - startTime}ms")
+                            }
+                        }
+                        currentIndex++
+                        validateNext()
+                    }
+            }
+
+            // Start the validation chain
+            validateNext()
+
+        } catch (e: Exception) {
+            logger.error("Performance test failed", e)
+            testContext.fail(e)
+        }
+    }
+
     @After
     fun tearDown(testContext: TestContext) {
         vertx.close(testContext.asyncAssertSuccess())
