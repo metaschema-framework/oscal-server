@@ -16,6 +16,7 @@ import kotlin.io.path.appendText
 import kotlinx.coroutines.Job
 import kotlin.coroutines.CoroutineContext
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.Path.of
 
@@ -54,16 +55,7 @@ class RequestHandler(
             }
             
             val content = urlProcessor.processUrl(encodedContent)
-            val args = mutableListOf("metaschema", "metapath", "eval")
-            args.add("-i")
-            args.add(content)
-            args.add("-e")
-
-            args.add(expression)
-            args.add("-m")
-            args.add(module)
-            
-            val result = commandExecutor.executeCommand(args)
+            val result = commandExecutor.evaluateMetapath(Paths.get(content), expression, module)
             logger.info(result.second)
             ctx.response().putHeader("Content-Type", "application/json")
             responseHandler.sendSuccessResponse(ctx, result.first, result.second)
@@ -77,9 +69,9 @@ class RequestHandler(
         try {
             logger.info("Handling Validate request")
             val encodedContent = ctx.queryParam("document").firstOrNull()
-            val encodedModule = ctx.queryParam("module").firstOrNull()
-            val constraint = ctx.queryParam("constraint")
-            val flags = ctx.queryParam("flags")
+            val flags = ctx.queryParam("flags").toSet()
+            val constraints = ctx.queryParam("constraint").map { urlProcessor.processUrl(it) }
+            val module = ctx.queryParam("module").firstOrNull()
             
             if (encodedContent == null) {
                 responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
@@ -87,32 +79,15 @@ class RequestHandler(
             }
             
             val content = urlProcessor.processUrl(encodedContent)
+            val inputPath = Paths.get(content)
             
-            // Generate SARIF output file path
-            
-            val args = mutableListOf("validate")
-            encodedModule?.let { module ->
-                if (module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0") {
-                    args[0] = "metaschema"
-                    args.add("validate")
-                } else {
-                    args[0] = "metaschema"
-                    args.add("validate-content")
-                }
-            }
-            args.add(content)
-            
-            constraint.forEach { constraint_document ->
-                args.add("-c")
-                args.add(urlProcessor.processUrl(constraint_document))
-            }
-            flags.forEach { flag ->
-                args.add(responseHandler.flagToParam(flag))
-            }
-            
-
             try {
-                val result = commandExecutor.executeCommand(args)
+                val result = commandExecutor.validateDocument(
+                    inputPath = inputPath,
+                    flags = flags,
+                    constraints = constraints.map { Paths.get(it) },
+                    module = module
+                )
                 
                 // Read SARIF output if it exists
                 val sarifContent = if (Files.exists(of(result.second))) {
@@ -146,9 +121,7 @@ class RequestHandler(
                 // Generate output file path
                 val outputFile = of(oscalDir.toString(), "resolve-${System.nanoTime()}.tmp")
                 
-                // Build command: resolve-profile --to=FORMAT source-file destination-file
-                val args = mutableListOf("resolve-profile", "--to=$format", content, outputFile.toString())
-                val result = commandExecutor.executeCommand(args)
+                val result = commandExecutor.resolveProfile(Paths.get(content), outputFile, format)
                 
                 // Read output and clean up
                 val output = if (Files.exists(outputFile)) Files.readString(outputFile) else result.second
@@ -161,7 +134,7 @@ class RequestHandler(
                 responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
             }
         } catch (e: Exception) {
-            logger.error("Error handling CLI request", e)
+            logger.error("Error handling request", e)
             responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
         }
     }
@@ -178,9 +151,7 @@ class RequestHandler(
                 // Generate output file path
                 val outputFile = of(oscalDir.toString(), "convert-${System.nanoTime()}.tmp")
                 
-                // Build command: convert --to=FORMAT source-file destination-file
-                val args = mutableListOf("convert", "--to=$format", content, outputFile.toString())
-                val result = commandExecutor.executeCommand(args)
+                val result = commandExecutor.convertDocument(Paths.get(content), outputFile, format)
                 
                 // Read output and clean up
                 val output = if (Files.exists(outputFile)) Files.readString(outputFile) else result.second
@@ -193,7 +164,7 @@ class RequestHandler(
                 responseHandler.sendErrorResponse(ctx, 400, "content parameter is missing")
             }
         } catch (e: Exception) {
-            logger.error("Error handling CLI request", e)
+            logger.error("Error handling request", e)
             responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
         }
     }
@@ -328,5 +299,4 @@ class RequestHandler(
             }
         }
     }
-
 }
