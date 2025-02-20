@@ -109,10 +109,26 @@ class DocumentValidator(private val oscalDir: Path) {
                     val isMetaschema = module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0" ||
                         inputPath.toString().contains("metaschema", true)
                     
+                    // Load constraint sets if provided
+                    val constraintSets = if (constraints.isNotEmpty()) {
+                        constraints.flatMap { constraintPath ->
+                            try {
+                                val constraintLoader = IBindingContext.getConstraintLoader()
+                                constraintLoader.load(constraintPath.toUri())
+                            } catch (e: Exception) {
+                                logger.error("Failed to load constraint set from ${constraintPath}", e)
+                                emptyList()
+                            }
+                        }.toSet()
+                    } else emptySet()
+
                     // Use appropriate binding context
                     val bindingContext = if (isMetaschema) {
                         logger.info("Using Metaschema binding context for metaschema document")
                         DefaultBindingContext()
+                    } else if (constraintSets.isNotEmpty()) {
+                        logger.info("Using OSCAL binding context with constraint sets")
+                        OscalValidationCommandExecutor().getBindingContext(constraintSets)
                     } else {
                         logger.info("Using OSCAL binding context")
                         context
