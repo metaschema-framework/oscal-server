@@ -6,9 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="1592dce9-8f09-4274-8c20-f8bd3d95f76e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/CommandExecutor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/CommandExecutor.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/FormatDetector.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/OscalValidationHandler.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/OscalValidationHandler.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/DocumentValidator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/gov/nist/secauto/oscal/tools/server/DocumentValidator.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -117,7 +115,7 @@
       <updated>1732645292337</updated>
       <workItem from="1732645293851" duration="862000" />
       <workItem from="1732646192483" duration="1981000" />
-      <workItem from="1739990465295" duration="4567000" />
+      <workItem from="1739990465295" duration="6682000" />
     </task>
     <servers />
   </component>

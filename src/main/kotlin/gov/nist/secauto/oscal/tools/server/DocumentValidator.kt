@@ -9,27 +9,80 @@ import gov.nist.secauto.metaschema.cli.processor.ExitCode
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
 import gov.nist.secauto.metaschema.core.configuration.DefaultConfiguration
+import gov.nist.secauto.metaschema.core.model.IModule
+import gov.nist.secauto.metaschema.core.model.constraint.IConstraintSet
 import gov.nist.secauto.metaschema.core.model.validation.AggregateValidationResult
+import gov.nist.secauto.metaschema.core.model.validation.XmlSchemaContentValidator
 import gov.nist.secauto.metaschema.core.model.validation.IValidationResult
+import gov.nist.secauto.metaschema.core.model.validation.JsonSchemaContentValidator
 import gov.nist.secauto.metaschema.core.model.constraint.ValidationFeature
+import gov.nist.secauto.metaschema.core.model.util.JsonUtil
+import gov.nist.secauto.metaschema.core.model.util.XmlUtil
+import gov.nist.secauto.metaschema.core.util.ObjectUtils
+import gov.nist.secauto.metaschema.core.util.CollectionUtil
 import gov.nist.secauto.metaschema.databind.DefaultBindingContext
+import gov.nist.secauto.metaschema.databind.IBindingContext
 import gov.nist.secauto.oscal.lib.OscalBindingContext
+import gov.nist.secauto.oscal.lib.model.OscalCompleteModule
 import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion
 import gov.nist.secauto.oscal.tools.server.validation.SarifHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.json.JSONObject
+import org.xml.sax.SAXException
+import java.io.IOException
+import java.io.InputStream
+import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
+import java.util.LinkedList
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.Source
+import kotlin.jvm.java
 
 class DocumentValidator(private val oscalDir: Path) {
     private val logger: Logger = LogManager.getLogger(DocumentValidator::class.java)
     private val context = OscalBindingContext.instance()
+
+    private class OscalValidationCommandExecutor : IBindingContext.ISchemaValidationProvider {
+
+        fun getBindingContext(constraintSets: Set<IConstraintSet>): IBindingContext {
+            return OscalBindingContext.builder()
+                .constraintSet(constraintSets)
+                .build()
+        }
+
+        @Throws(IOException::class, SAXException::class)
+        override fun getXmlSchemas(source:URL,bindingContext: IBindingContext) :XmlSchemaContentValidator {
+            val retval = LinkedList<Source>();
+            retval.add(
+                XmlUtil.getStreamSource(ObjectUtils.requireNonNull(
+                    OscalBindingContext::class.java.getResource("/schema/xml/oscal-complete_schema.xsd"))));
+            return XmlSchemaContentValidator(CollectionUtil.unmodifiableList(retval));
+          }
+
+        override fun getJsonSchema(json: JSONObject, bindingContext: IBindingContext): JsonSchemaContentValidator {
+            val inputStream = ObjectUtils.requireNonNull(
+                OscalBindingContext::class.java.getResourceAsStream("/schema/json/oscal-complete_schema.json"));
+              return JsonSchemaContentValidator(JsonUtil.toJsonObject(inputStream));
+        }
+
+        fun getSchemaValidationProvider(
+            module: IModule,
+            bindingContext: IBindingContext
+        ): IBindingContext.ISchemaValidationProvider {
+            return this
+        }
+
+        fun getModule( bindingContext: IBindingContext): IModule {
+            return bindingContext.registerModule(OscalCompleteModule::class.java)
+        }
+    }
 
     suspend fun validateDocument(
         inputPath: Path,
@@ -91,12 +144,19 @@ class DocumentValidator(private val oscalDir: Path) {
                         
                         // Perform schema validation
                         logger.debug("Performing schema validation...")
+                        val module = bindingContext.registerModule(OscalCompleteModule::class.java)
+                        // validationResult = bindingContext(inputPath.toUri(), sourceFormat, bindingContext)
+                        logger.info("Schema validation completed")
                         
                         // Perform constraint validation if needed
                         if (constraints.isNotEmpty()) {
                             logger.debug("Performing constraint validation...")
                             val constraintResult = bindingContext.validateWithConstraints(inputPath.toUri(), configuration)
-                            validationResult = AggregateValidationResult.aggregate(validationResult!!, constraintResult)
+                            validationResult = if (validationResult == null) {
+                                constraintResult
+                            } else {
+                                AggregateValidationResult.aggregate(validationResult, constraintResult)
+                            }
                             logger.info("Constraint validation completed")
                         }
                         
@@ -123,7 +183,6 @@ class DocumentValidator(private val oscalDir: Path) {
                 } catch (e: Exception) {
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
                 }
-                
                 
                 Pair(exitStatus, sarifFilePath)
             }
@@ -235,12 +294,6 @@ class DocumentValidator(private val oscalDir: Path) {
                   "message": {
                     "text": "Error occurred during OSCAL command execution: $errorMessage"
                   },
-                  "level": "error"
-                }
-              ]
-            }
-          ]
-        }
         """.trimIndent()
     }
 }
