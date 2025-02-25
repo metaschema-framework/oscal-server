@@ -28,71 +28,66 @@ class ProfileResolverService {
     suspend fun resolveProfile(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
         logger.info("Resolving profile from $inputPath to $outputPath with format $format")
         return try {
-            withContext(Dispatchers.IO) {
                 val exitStatus = try {
                     val loader: IBoundLoader = context.newBoundLoader()
                     logger.info("Starting profile resolution")
                     
-                    // Open input stream and detect format
-                    logger.debug("Detecting source format...")
-                    val inputStream = inputPath.toUri().toURL().openStream()
-                    val formatResult = loader.detectFormat(inputStream, inputPath.toUri())
-                    val sourceFormat = formatResult.getFormat()
-                    logger.info("Detected source format: $sourceFormat")
-                    
-                    // Get data stream for loading
-                    val dataStream = formatResult.getDataStream()
+                    // Validate format parameter
+                    val outputFormat = when (format.lowercase()) {
+                        "json" -> Format.JSON
+                        "xml" -> Format.XML
+                        else -> throw IllegalArgumentException("Unsupported format: $format. Must be 'json' or 'xml'")
+                    }
                     
                     // Load and validate profile
                     logger.debug("Loading and validating profile...")
-                    val modelResult = loader.detectModel(dataStream, inputPath.toUri(), sourceFormat)
-                    val modelInputStream = modelResult.getDataStream()
-                    val document = loader.load(modelResult.getBoundClass(), sourceFormat, modelInputStream, inputPath.toUri())
+                    val document = inputPath.toUri().toURL().openStream().use { inputStream ->
+                        val formatResult = loader.detectFormat(inputStream, inputPath.toUri())
+                        val sourceFormat = formatResult.getFormat()
+                        logger.info("Detected source format: $sourceFormat")
+                        
+                        val modelResult = loader.detectModel(formatResult.getDataStream(), inputPath.toUri(), sourceFormat)
+                        loader.load(modelResult.getBoundClass(), sourceFormat, modelResult.getDataStream(), inputPath.toUri())
+                    }
                     
                     // Ensure the loaded document is a Profile
                     if (document !is Profile) {
-                        logger.error("Document is not a Profile: ${document.javaClass.simpleName}")
-                        throw IllegalArgumentException("Document is not a Profile")
+                        val msg = "Document is not a Profile: ${document.javaClass.simpleName}"
+                        logger.error(msg)
+                        throw IllegalArgumentException(msg)
                     }
                     logger.info("Profile loaded successfully")
                     
-                    // Create temporary file for the profile
-                    logger.debug("Creating temporary file for profile...")
-                    val tempFile = Files.createTempFile(null, ".json")
-                    try {
-                        // Write the profile to temp file
-                        Files.newOutputStream(tempFile).use { out ->
-                            context.newSerializer(sourceFormat, Profile::class.java).serialize(document, out)
-                        }
-                        
-                        // Create resolver and resolve profile
-                        logger.debug("Creating profile resolver...")
-                        val resolver = ProfileResolver()
-                        logger.debug("Resolving profile...")
-                        val resolvedProfile = resolver.resolve(tempFile) as IBoundObject
-                        
-                        // Serialize to the output
-                        logger.debug("Serializing resolved profile...")
-                        Files.newOutputStream(outputPath).use { out ->
-                            val outputFormat = if (format.equals("json", true)) Format.JSON else Format.XML
-                            context.newSerializer(outputFormat, resolvedProfile.javaClass).serialize(resolvedProfile, out)
-                        }
-                        logger.info("Profile resolution completed successfully")
-                    } finally {
-                        // Clean up temp file
-                        Files.deleteIfExists(tempFile)
+                    // Create resolver and resolve profile directly from input path
+                    logger.debug("Creating profile resolver...")
+                    val resolver = ProfileResolver()
+                    logger.debug("Resolving profile...")
+                    val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
+                    
+                    // Serialize resolved profile to the output
+                    logger.debug("Serializing resolved profile...")
+                    Files.newOutputStream(outputPath).use { out ->
+                        context.newSerializer(outputFormat, resolvedProfile.javaClass).serialize(resolvedProfile, out)
                     }
+                    logger.info("Profile resolution completed successfully")
                     
                     MessageExitStatus(ExitCode.OK, "Profile resolution completed successfully")
                 } catch (e: Exception) {
-                    logger.error("Profile resolution failed", e)
-                    MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
+                    val errorMsg = when (e) {
+                        is IllegalArgumentException -> e.message ?: "Invalid input"
+                        is java.nio.file.NoSuchFileException -> "Input file not found: ${e.file}"
+                        is java.io.IOException -> "I/O error: ${e.message}"
+                        else -> "Profile resolution failed: ${e.message}"
+                    }
+                    logger.error(errorMsg, e)
+                    MessageExitStatus(ExitCode.RUNTIME_ERROR, errorMsg)
                 }
                 Pair(exitStatus, "")
-            }
+            
         } catch (e: Exception) {
-            logger.error("Profile resolution failed with exception", e)
-            MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message) to ""
+            val errorMsg = "Unexpected error during profile resolution: ${e.message}"
+            logger.error(errorMsg, e)
+            MessageExitStatus(ExitCode.RUNTIME_ERROR, errorMsg) to ""
         }
     }
 }

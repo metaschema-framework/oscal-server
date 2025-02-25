@@ -4,7 +4,6 @@
  */
 
 package gov.nist.secauto.oscal.tools.server.validation
-
 import gov.nist.secauto.metaschema.modules.sarif.SarifValidationHandler
 import gov.nist.secauto.metaschema.core.model.validation.IValidationFinding
 import gov.nist.secauto.metaschema.core.util.ObjectUtils

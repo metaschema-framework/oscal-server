@@ -92,9 +92,7 @@ class DocumentValidator(private val oscalDir: Path) {
     ): Pair<ExitStatus, String> {
         logger.info("Validating document: $inputPath")
         return try {
-            withContext(Dispatchers.IO) {
                 val guid = UUID.randomUUID().toString()
-                val sarifFileName = "${guid}.sarif"
                 Files.createDirectories(oscalDir)
                 val targetPath = Files.createTempFile(oscalDir, guid, ".sarif")
                 val sarifFilePath = targetPath.toString()
@@ -160,7 +158,6 @@ class DocumentValidator(private val oscalDir: Path) {
                         
                         // Perform schema validation
                         logger.debug("Performing schema validation...")
-                        val module = bindingContext.registerModule(OscalCompleteModule::class.java)
                         // validationResult = bindingContext(inputPath.toUri(), sourceFormat, bindingContext)
                         logger.info("Schema validation completed")
                         
@@ -201,7 +198,7 @@ class DocumentValidator(private val oscalDir: Path) {
                 }
                 
                 Pair(exitStatus, sarifFilePath)
-            }
+            
         } catch (e: Exception) {
             MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message) to ""
         }

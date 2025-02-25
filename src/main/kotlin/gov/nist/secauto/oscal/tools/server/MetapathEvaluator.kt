@@ -6,12 +6,15 @@
 package gov.nist.secauto.oscal.tools.server
 
 import gov.nist.secauto.metaschema.cli.processor.ExitCode
-import gov.nist.secauto.oscal.tools.cli.core.OscalCliVersion
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
-import gov.nist.secauto.metaschema.databind.io.Format
-import gov.nist.secauto.metaschema.databind.io.IBoundLoader
-import gov.nist.secauto.metaschema.core.model.IBoundObject
+import gov.nist.secauto.metaschema.core.metapath.DynamicContext
+import gov.nist.secauto.metaschema.core.metapath.item.ISequence
+import gov.nist.secauto.metaschema.core.metapath.MetapathExpression
+import gov.nist.secauto.metaschema.core.metapath.StaticContext
+import gov.nist.secauto.metaschema.core.metapath.item.IItem
+import gov.nist.secauto.metaschema.core.metapath.item.JsonItemWriter
+import gov.nist.secauto.metaschema.core.metapath.item.node.INodeItem
 import gov.nist.secauto.oscal.lib.OscalBindingContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,94 +37,56 @@ class MetapathEvaluator {
     ): Pair<ExitStatus, String> {
         logger.info("Evaluating metapath expression on: $inputPath")
         return try {
-            withContext(Dispatchers.IO) {
                 val exitStatus = try {
-                    val loader: IBoundLoader = context.newBoundLoader()
-                    logger.info("Starting metapath evaluation")
-                    
-                    // Open input stream and detect format
-                    logger.debug("Detecting document format...")
-                    val inputStream = inputPath.toUri().toURL().openStream()
-                    val formatResult = loader.detectFormat(inputStream, inputPath.toUri())
-                    val sourceFormat = formatResult.getFormat()
-                    logger.info("Detected format: $sourceFormat")
-                    
-                    // Get data stream for loading
-                    val dataStream = formatResult.getDataStream()
-                    
-                    // Load document
-                    logger.debug("Loading document...")
-                    val modelResult = loader.detectModel(dataStream, inputPath.toUri(), sourceFormat)
-                    val modelInputStream = modelResult.getDataStream()
-                    val document = loader.load(modelResult.getBoundClass(), sourceFormat, modelInputStream, inputPath.toUri())
-                    logger.info("Document loaded as: ${document.javaClass.simpleName}")
-                    
-                    // Create a binding context for metapath evaluation
-                    logger.debug("Creating JSON serializer for metapath evaluation...")
-                    val serializer = context.newSerializer(Format.JSON, document.javaClass)
-                    val outputStream = java.io.ByteArrayOutputStream()
-                    
-                    logger.debug("Serializing document for metapath evaluation...")
-                    serializer.serialize(document, outputStream)
-                    
-                    // For now, return the full JSON document
-                    // TODO: Implement proper metapath evaluation when API is available
-                    val jsonResult = outputStream.toString()
-                    logger.info("Document serialized successfully for metapath evaluation")
-                    
-                    // Create SARIF output for successful evaluation
-                    val guid = UUID.randomUUID().toString()
-                    val sarifPath = Paths.get(oscalDir.toString(), "${guid}.sarif")
-                    Files.newBufferedWriter(sarifPath).use { writer ->
-                        writer.write(createSuccessSarif(document.javaClass.simpleName))
+                    // Load document as node item
+                    logger.debug("Loading document as node item...")
+                    val loader = context.newBoundLoader()
+                    val item: INodeItem = loader.loadAsNodeItem(inputPath.toUri())
+                    logger.info("Document loaded successfully")
+
+                    // Set up metapath context
+                    logger.debug("Setting up metapath context...")
+                    val staticContext = StaticContext.builder()
+                        .defaultModelNamespace("http://csrc.nist.gov/ns/oscal/1.0")
+                        .build()
+                    val dynamicContext = DynamicContext(staticContext)
+
+                    // Compile and evaluate expression
+                    logger.debug("Compiling metapath expression: $expression")
+                    val compiledMetapath = try {
+                        MetapathExpression.compile(expression, staticContext)
+                    } catch (ex: Exception) {
+                        logger.error("Failed to compile metapath expression", ex)
+                        return Pair(
+                            MessageExitStatus(ExitCode.FAIL, "Failed to compile metapath expression: ${ex.message}"),
+                            ""
+                        )
                     }
+
+                    logger.debug("Evaluating metapath expression...")
+                    val sequence: ISequence<INodeItem> = compiledMetapath.evaluate(item, dynamicContext)
+
+                    // Write result to string
+                    logger.debug("Writing evaluation results...")
+                    val stringWriter = java.io.StringWriter()
+                    java.io.PrintWriter(stringWriter).use { writer ->
+                        val itemWriter = JsonItemWriter(writer, context)
+                        itemWriter.writeSequence(sequence)
+                    }
+
+                    val result = stringWriter.toString()
                     logger.info("Metapath evaluation completed successfully")
-                    
-                    MessageExitStatus(ExitCode.OK, jsonResult)
+                    MessageExitStatus(ExitCode.OK, result)
                 } catch (e: Exception) {
                     logger.error("Metapath evaluation failed", e)
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
                 }
                 Pair(exitStatus, exitStatus.message ?: "")
-            }
+            
         } catch (e: Exception) {
             logger.error("Metapath evaluation failed with exception", e)
             MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message) to ""
         }
     }
 
-    private fun createSuccessSarif(documentType: String): String {
-        val version = OscalCliVersion().getVersion()
-        return """
-        {
-          "${'$'}schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-          "version": "2.1.0",
-          "runs": [
-            {
-              "tool": {
-                "driver": {
-                  "name": "OSCAL Server",
-                  "informationUri": "https://github.com/metaschema-framework/oscal-server",
-                  "version": "$version"
-                }
-              },
-              "results": [],
-              "invocations": [
-                {
-                  "executionSuccessful": true,
-                  "toolExecutionNotifications": [
-                    {
-                      "level": "note",
-                      "message": {
-                        "text": "Document validated successfully as $documentType"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """.trimIndent()
-    }
 }

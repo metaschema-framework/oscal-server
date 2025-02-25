@@ -6,10 +6,10 @@
 
   <groupId>gov.nist.secauto.oscal.tools</groupId>
   <artifactId>server</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <properties>
-    
+    <maven.resolver.transport.snapshot.update>never</maven.resolver.transport.snapshot.update>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <kotlin.version>1.8.21</kotlin.version>
@@ -24,8 +24,8 @@
     <vertx.version>4.5.10</vertx.version>
     <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
     <oscal-cli.version>2.4.0</oscal-cli.version>
-    <metaschema-framework.version>2.1.0</metaschema-framework.version>
-    <liboscal-java.version>5.1.0</liboscal-java.version>
+    <metaschema-framework.version>2.2.0</metaschema-framework.version>
+    <liboscal-java.version>5.2.0</liboscal-java.version>
     <java.version>1.8</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -103,6 +103,17 @@
       <groupId>dev.metaschema.oscal</groupId>
       <artifactId>oscal-cli-enhanced</artifactId>
       <version>${oscal-cli.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-databind-modules</artifactId>
+      <version>${metaschema-framework.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
@@ -435,4 +446,22 @@
       </plugin>
     </plugins>
   </build>
+  <repositories>
+  <!-- Point to your local .m2 repository -->
+  <repository>
+    <id>local-m2-repo</id>
+    <url>file:///${user.home}/.m2/repository</url>
+    <releases>
+      <enabled>true</enabled>
+      <updatePolicy>never</updatePolicy>
+    </releases>
+    <snapshots>
+      <enabled>true</enabled>
+      <updatePolicy>never</updatePolicy>
+    </snapshots>
+  </repository>
+  </repositories>
+
+
+
 </project>

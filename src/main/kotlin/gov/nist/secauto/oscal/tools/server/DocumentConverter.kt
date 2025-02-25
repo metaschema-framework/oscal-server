@@ -26,7 +26,6 @@ class DocumentConverter {
     suspend fun convertDocument(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
         logger.info("Converting document from $inputPath to $outputPath with format $format")
         return try {
-            withContext(Dispatchers.IO) {
                 val exitStatus = try {
                     val loader: IBoundLoader = context.newBoundLoader()
                     logger.info("Starting document conversion")
@@ -64,7 +63,7 @@ class DocumentConverter {
                     MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message)
                 }
                 Pair(exitStatus, "")
-            }
+            
         } catch (e: Exception) {
             logger.error("Conversion failed with exception", e)
             MessageExitStatus(ExitCode.RUNTIME_ERROR, e.message) to ""
