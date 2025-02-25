@@ -317,19 +317,12 @@ const Documents: React.FC = () => {
               borderBottom: '1px solid var(--ion-border-color)',
               marginBottom: '10px'
             }}>
-              <IonToolbar style={{ 
-                '--padding-start': '0',
-                '--padding-end': '0'
-              }}>
-                <IonButtons slot='start'>
-
-                  <IonLabel position="stacked">Metapath Expression</IonLabel>
-                  <IonInput
+              <IonToolbar>
+                <IonInput
                     value={metapathExpression}
                     onIonChange={(e) => setMetapathExpression(e.detail.value || "")}
                     placeholder="Enter metapath expression (e.g., //control)"
                   />
-                </IonButtons>
                 <IonButtons slot="end">
                 <IonButton                   
                     onClick={handleMetapathQuery} 
