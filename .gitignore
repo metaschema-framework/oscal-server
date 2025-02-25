@@ -8,3 +8,4 @@ target
 /client/dist
 /src/main/resources/webroot
 /src/main/resources/webroot
+/.idea
