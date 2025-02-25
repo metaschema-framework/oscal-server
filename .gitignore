@@ -7,3 +7,4 @@ target
 /node_modules
 /client/dist
 /src/main/resources/webroot
+/src/main/resources/webroot
