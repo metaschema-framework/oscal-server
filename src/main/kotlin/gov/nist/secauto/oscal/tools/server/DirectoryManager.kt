@@ -104,7 +104,7 @@ class DirectoryManager {
         allowedDirs.add(packagesDir)
         allowedDirs.add(uploadsDir)
 
-        val envPath = "*";
+        val envPath = System.getenv("OSCAL_SERVER_PATH")
         if (!envPath.isNullOrBlank()) {
             if (envPath.trim() == "*") {
                 logger.warn("OSCAL_SERVER_PATH set to '*' - all directories will be accessible")
