@@ -104,8 +104,7 @@ class DocumentValidator(private val oscalDir: Path) {
                     val sarifHandler = SarifHandler(inputPath, Paths.get(sarifFilePath))
 
                     // Determine if this is a metaschema document
-                    val isMetaschema = module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0" ||
-                        inputPath.toString().contains("metaschema", true)
+                    val isMetaschema = module == "http://csrc.nist.gov/ns/oscal/metaschema/1.0";
                     
                     // Load constraint sets if provided
                     val constraintSets = if (constraints.isNotEmpty()) {
