@@ -40,6 +40,7 @@ import { RenderOscal } from "../components/oscal/RenderOscal";
 import { useOscal } from "../context/OscalContext";
 import { ApiService, ConversionService } from "../services/api";
 import { OscalPackage } from "../types";
+import { JSONTree } from "react-json-tree";
 
 interface DocumentEntry {
   id: string;
@@ -320,26 +321,29 @@ const Documents: React.FC = () => {
                 '--padding-start': '0',
                 '--padding-end': '0'
               }}>
-                <IonItem style={{ 
-                  '--padding-start': '16px',
-                  width: '100%'
-                }}>
+                <IonButtons slot='start'>
+
                   <IonLabel position="stacked">Metapath Expression</IonLabel>
                   <IonInput
                     value={metapathExpression}
                     onIonChange={(e) => setMetapathExpression(e.detail.value || "")}
                     placeholder="Enter metapath expression (e.g., //control)"
                   />
-                  <IonButtons slot="end">
-                    <IonButton 
-                      onClick={handleMetapathQuery} 
-                      disabled={queryingMetapath || !metapathExpression}
-                    >
+                </IonButtons>
+                <IonButtons slot="end">
+                <IonButton                   
+                    onClick={handleMetapathQuery} 
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        handleMetapathQuery();
+                      }
+                    }}
+                    disabled={queryingMetapath || !metapathExpression}
+                  >
                       <IonIcon slot="start" icon={codeOutline} />
                       {queryingMetapath ? <IonSpinner name="dots" /> : 'Execute'}
                     </IonButton>
                   </IonButtons>
-                </IonItem>
               </IonToolbar>
               
               {showMetapathResults && (
@@ -356,19 +360,7 @@ const Documents: React.FC = () => {
                     </IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
-                    {metapathResults ? (
-                      <pre style={{ 
-                        whiteSpace: 'pre-wrap', 
-                        overflowX: 'auto',
-                        backgroundColor: 'var(--ion-color-light)',
-                        padding: '10px',
-                        borderRadius: '4px'
-                      }}>
-                        {metapathResults}
-                      </pre>
-                    ) : (
-                      <p>No results found or an error occurred.</p>
-                    )}
+                    {metapathResults!==null&&<JSONTree hideRoot data={JSON.parse(metapathResults)}/>}
                   </IonCardContent>
                 </IonCard>
               )}
