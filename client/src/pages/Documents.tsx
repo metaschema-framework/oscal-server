@@ -1,4 +1,6 @@
 import {
+  IonButton,
+  IonButtons,
   IonCard,
   IonCardContent,
   IonCardHeader,
@@ -11,37 +13,33 @@ import {
   IonItem,
   IonLabel,
   IonList,
-  IonNote,
-  IonPage,
-  IonRow,
-  IonTitle,
-  IonToolbar,
-  useIonRouter,
-  IonSpinner,
-  IonButton,
-  IonButtons,
-  IonToast,
-  IonSelect,
-  IonSelectOption,
-  IonSplitPane,
   IonMenu,
   IonMenuButton,
+  IonPage,
+  IonRow,
+  IonSelect,
+  IonSelectOption,
+  IonSpinner,
+  IonSplitPane,
+  IonTitle,
+  IonToast,
+  IonToolbar,
+  useIonRouter,
+  IonInput,
+  IonTextarea
 } from "@ionic/react";
-import { 
-  documentOutline, 
-  checkmarkCircleOutline, 
-  swapHorizontalOutline,
-  gitCompareOutline,
+import {
+  checkmarkCircleOutline,
+  documentOutline,
+  codeOutline,
+  closeCircleOutline
 } from "ionicons/icons";
-import React, { useEffect, useState } from "react";
-import Search from "../components/common/Search";
+import React, { useEffect, useState, useRef } from "react";
 import ImportOscal from "../components/ImportOscal";
+import { RenderOscal } from "../components/oscal/RenderOscal";
 import { useOscal } from "../context/OscalContext";
-import { StorageService } from "../services/storage";
-import PackageSelector from "../components/PackageSelector";
 import { ApiService, ConversionService } from "../services/api";
 import { OscalPackage } from "../types";
-import { RenderOscal } from "../components/oscal/RenderOscal";
 
 interface DocumentEntry {
   id: string;
@@ -60,6 +58,12 @@ const Documents: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string>("");
   const [toastColor, setToastColor] = useState<string>("success");
   const [showToast, setShowToast] = useState(false);
+  
+  // Metapath state
+  const [metapathExpression, setMetapathExpression] = useState<string>("");
+  const [metapathResults, setMetapathResults] = useState<string | null>(null);
+  const [queryingMetapath, setQueryingMetapath] = useState(false);
+  const [showMetapathResults, setShowMetapathResults] = useState(false);
 
   // Load document list when package changes
   useEffect(() => {
@@ -195,6 +199,32 @@ const Documents: React.FC = () => {
     }
   };
 
+  const handleMetapathQuery = async () => {
+    if (!selectedDocument || !documentId || !metapathExpression) return;
+    
+    setQueryingMetapath(true);
+    setShowMetapathResults(true);
+    try {
+      const format = documentId.split('.').pop() || 'json';
+      const results = await ApiService.queryPackageDocument(
+        packageId, 
+        documentId, 
+        metapathExpression
+      );
+      setMetapathResults(results);
+      setToastColor('success');
+      setToastMessage("Metapath query executed successfully");
+      setShowToast(true);
+    } catch (error) {
+      setMetapathResults(null);
+      setToastColor('danger');
+      setToastMessage(`Metapath query error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowToast(true);
+    } finally {
+      setQueryingMetapath(false);
+    }
+  };
+
   return (
     <IonSplitPane contentId="documents-main">
       <IonMenu contentId="documents-main" side="start">
@@ -245,101 +275,157 @@ const Documents: React.FC = () => {
       
       <IonPage id="documents-main">
         <IonToast
-        isOpen={showToast}
-        onDidDismiss={() => setShowToast(false)}
-        message={toastMessage}
-        color={toastColor}
-        duration={3000}
-        position="bottom"
-      />
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonMenuButton />
-          </IonButtons>
-          <IonTitle>Documents</IonTitle>
-          {selectedDocument && (
-            <IonButtons slot="end">
-              <IonButton onClick={handleValidate} disabled={validating}>
-                <IonIcon slot="start" icon={checkmarkCircleOutline} />
-                {validating ? 'Validating...' : 'Validate'}
-              </IonButton>
-              
-              <IonSelect 
-                value={""}
-                onIonChange={e => {;
-                   handleConvert(e.detail.value)}}
-                interface="popover"
-              >
-                <IonSelectOption disabled value="">Convert</IonSelectOption>
-                <IonSelectOption value="json">to JSON</IonSelectOption>
-                <IonSelectOption value="yaml">to YAML</IonSelectOption>
-                <IonSelectOption value="xml">to XML</IonSelectOption>
-              </IonSelect>
-
-
-              {/* {selectedDocument.profile && (
-                <IonButton onClick={handleResolveProfile} disabled={resolving}>
-                  <IonIcon slot="start" icon={gitCompareOutline} />
-                  {resolving ? 'Resolving...' : 'Resolve Profile'}
-                </IonButton>
-              )} */}
+          isOpen={showToast}
+          onDidDismiss={() => setShowToast(false)}
+          message={toastMessage}
+          color={toastColor}
+          duration={3000}
+          position="bottom"
+        />
+        <IonHeader>
+          <IonToolbar>
+            <IonButtons slot="start">
+              <IonMenuButton />
             </IonButtons>
-          )}
-        </IonToolbar>
-      </IonHeader>
-      <IonContent>
-        <IonGrid>
-          <IonRow>
-            <IonCol size="12">
-              {documentId && selectedDocument ? (
+            <IonTitle>Documents</IonTitle>
+            {selectedDocument && (
+              <IonButtons slot="end">
+                <IonButton onClick={handleValidate} disabled={validating}>
+                  <IonIcon slot="start" icon={checkmarkCircleOutline} />
+                  {validating ? 'Validating...' : 'Validate'}
+                </IonButton>
+                
+                <IonSelect 
+                  value={""}
+                  onIonChange={e => {
+                    handleConvert(e.detail.value)}}
+                  interface="popover"
+                >
+                  <IonSelectOption disabled value="">Convert</IonSelectOption>
+                  <IonSelectOption value="json">to JSON</IonSelectOption>
+                  <IonSelectOption value="yaml">to YAML</IonSelectOption>
+                  <IonSelectOption value="xml">to XML</IonSelectOption>
+                </IonSelect>
+              </IonButtons>
+            )}
+          </IonToolbar>
+        </IonHeader>
+        <IonContent>
+          {selectedDocument && (
+            <div className="metapath-bar" style={{ 
+              borderBottom: '1px solid var(--ion-border-color)',
+              marginBottom: '10px'
+            }}>
+              <IonToolbar style={{ 
+                '--padding-start': '0',
+                '--padding-end': '0'
+              }}>
+                <IonItem style={{ 
+                  '--padding-start': '16px',
+                  width: '100%'
+                }}>
+                  <IonLabel position="stacked">Metapath Expression</IonLabel>
+                  <IonInput
+                    value={metapathExpression}
+                    onIonChange={(e) => setMetapathExpression(e.detail.value || "")}
+                    placeholder="Enter metapath expression (e.g., //control)"
+                  />
+                  <IonButtons slot="end">
+                    <IonButton 
+                      onClick={handleMetapathQuery} 
+                      disabled={queryingMetapath || !metapathExpression}
+                    >
+                      <IonIcon slot="start" icon={codeOutline} />
+                      {queryingMetapath ? <IonSpinner name="dots" /> : 'Execute'}
+                    </IonButton>
+                  </IonButtons>
+                </IonItem>
+              </IonToolbar>
+              
+              {showMetapathResults && (
                 <IonCard>
                   <IonCardHeader>
-                    <IonCardTitle>{packageId}-{documentId}</IonCardTitle>
+                    <IonCardTitle style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Metapath Results</span>
+                      <IonButton 
+                        fill="clear" 
+                        onClick={() => setShowMetapathResults(false)}
+                      >
+                        <IonIcon icon={closeCircleOutline} />
+                      </IonButton>
+                    </IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
-                    <div style={{ 
-                      padding: '1rem',
-                      backgroundColor: 'var(--ion-item-background)',
-                      borderRadius: '4px',
-                      margin: '0.5rem',
-                      border: '1px solid var(--ion-border-color)',
-                      boxShadow: '0 1px 2px var(--ion-color-step-100)'
-                    }}>
-                      {(()=>{console.log(selectedDocument);
-                        return <></>
-                      })()}
-                    <RenderOscal document={selectedDocument as OscalPackage}/>
-                    </div>
-                  </IonCardContent>
-                </IonCard>
-              ) : (
-                <IonCard style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
-                  height: 'calc(100% - 2rem)',
-                  margin: '1rem'
-                }}>
-                  <IonCardContent style={{ textAlign: 'center' }}>
-                    <IonIcon 
-                      icon={documentOutline} 
-                      style={{ 
-                        fontSize: '48px', 
-                        color: 'var(--ion-color-step-500)',
-                        marginBottom: '1rem'
-                      }} 
-                    />
-                    <p style={{ color: 'var(--ion-color-step-500)' }}>
-                      Select a document from the list to view its contents
-                    </p>
+                    {metapathResults ? (
+                      <pre style={{ 
+                        whiteSpace: 'pre-wrap', 
+                        overflowX: 'auto',
+                        backgroundColor: 'var(--ion-color-light)',
+                        padding: '10px',
+                        borderRadius: '4px'
+                      }}>
+                        {metapathResults}
+                      </pre>
+                    ) : (
+                      <p>No results found or an error occurred.</p>
+                    )}
                   </IonCardContent>
                 </IonCard>
               )}
-            </IonCol>
-          </IonRow>
-        </IonGrid>
-      </IonContent>
+            </div>
+          )}
+          
+          <IonGrid>
+            <IonRow>
+              <IonCol size="12">
+                {documentId && selectedDocument ? (
+                  <IonCard>
+                    <IonCardHeader>
+                      <IonCardTitle>{packageId}-{documentId}</IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <div style={{ 
+                        padding: '1rem',
+                        backgroundColor: 'var(--ion-item-background)',
+                        borderRadius: '4px',
+                        margin: '0.5rem',
+                        border: '1px solid var(--ion-border-color)',
+                        boxShadow: '0 1px 2px var(--ion-color-step-100)'
+                      }}>
+                        {(()=>{console.log(selectedDocument);
+                          return <></>
+                        })()}
+                      <RenderOscal document={selectedDocument as OscalPackage}/>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
+                ) : (
+                  <IonCard style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: 'calc(100% - 2rem)',
+                    margin: '1rem'
+                  }}>
+                    <IonCardContent style={{ textAlign: 'center' }}>
+                      <IonIcon 
+                        icon={documentOutline} 
+                        style={{ 
+                          fontSize: '48px', 
+                          color: 'var(--ion-color-step-500)',
+                          marginBottom: '1rem'
+                        }} 
+                      />
+                      <p style={{ color: 'var(--ion-color-step-500)' }}>
+                        Select a document from the list to view its contents
+                      </p>
+                    </IonCardContent>
+                  </IonCard>
+                )}
+              </IonCol>
+            </IonRow>
+          </IonGrid>
+        </IonContent>
       </IonPage>
     </IonSplitPane>
   );

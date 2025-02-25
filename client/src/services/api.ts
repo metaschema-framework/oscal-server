@@ -187,6 +187,38 @@ export const ApiService = {
       throw new Error(`Failed to delete file: ${response.statusText}`);
     }
   },
+
+  // Execute a metapath query on a document
+  queryDocument: async (content: string, expression: string, format: string, module: string = "https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml"): Promise<string> => {
+    const response = await fetch(`/api/query?expression=${encodeURIComponent(expression)}&module=${encodeURIComponent(module)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': getContentTypeFromFormat(format),
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Metapath query failed: ${errorText}`);
+    }
+
+    return response.text();
+  },
+
+  // Execute a metapath query on a package document
+  queryPackageDocument: async (packageId: string, documentId: string, expression: string, module: string = "https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml"): Promise<string> => {
+    const response = await fetch(`/api/query?document=file://~/.oscal/packages/${packageId}/${documentId}&expression=${encodeURIComponent(expression)}&module=${encodeURIComponent(module)}`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Metapath query failed: ${errorText}`);
+    }
+
+    return response.text();
+  },
 };
 
 function getContentTypeFromFormat(format: string): string {
