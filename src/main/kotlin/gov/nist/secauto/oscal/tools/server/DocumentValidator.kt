@@ -245,7 +245,9 @@ class DocumentValidator(private val oscalDir: Path) {
         })
         
         // Skip validation for constraint files themselves
-        if (inputPath.toString().contains("constraints") && inputPath.toString().contains("fedramp-external")) {
+        if (inputPath.toString().matches(".*constraints.*fedramp-external.*") || 
+            (Files.exists(inputPath) && Files.probeContentType(inputPath)?.contains("xml") == true && 
+             Files.readString(inputPath).contains("<metaschema-meta-constraints>"))) {
             logger.info("Input file is a constraint file, skipping validation")
             return
         }
