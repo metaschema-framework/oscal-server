@@ -13,6 +13,8 @@ import java.io.StringWriter
 import  gov.nist.secauto.metaschema.core.metapath.item.IItem
 import  gov.nist.secauto.metaschema.core.metapath.item.IItemWriter
 import  gov.nist.secauto.metaschema.core.metapath.item.IItemVisitor
+import org.apache.logging.log4j.Logger
+import org.apache.logging.log4j.LogManager
 
 /**
  * Produces a JSON representation of a Metapath sequence.
@@ -21,6 +23,7 @@ class JsonItemWriter(
     private val writer: PrintWriter,
     private val bindingContext: IBindingContext
 ) : IItemWriter {
+    private val logger: Logger = LogManager.getLogger(JsonItemWriter::class.java)
     private var indentLevel = 0
     private val visitor = Visitor()
 
@@ -44,20 +47,20 @@ private fun Any?.serializeValue(): String {
                 StringWriter().use { stringWriter ->
                     val boundObject = this as? IBoundObject ?: run {
                         // Add debug information before potential NPE
-                        println("Debug: toString() called on object of type: ${this?.javaClass}")
+                        logger.debug("toString() called on object of type: ${this?.javaClass}")
                         return "\"${toString()?.escapeJson() ?: "null"}\""
                     }
                     
                     val boundClass = boundObject::class.java
-                    println("Debug: Processing bound class: ${boundClass.name}")
+                    logger.debug("Processing bound class: ${boundClass.name}")
                     
                     val boundDefinition = bindingContext.getBoundDefinitionForClass(boundClass)
-                    println("Debug: Bound definition: ${boundDefinition != null}")                    
+                    logger.debug("Bound definition: ${boundDefinition != null}")                    
                     if (boundDefinition != null) {
                         val serializer = bindingContext.newSerializer(Format.JSON, boundClass)
                         serializer.set(SerializationFeature.SERIALIZE_ROOT, false);
                         serializer.serialize(boundObject, stringWriter)
-                    println(stringWriter.toString());
+                    logger.debug("Serialized content: {}", stringWriter.toString());
                         stringWriter.toString()
                     } else {
                         "\"${boundObject.toString()?.escapeJson() ?: "null"}\""
@@ -67,8 +70,8 @@ private fun Any?.serializeValue(): String {
                 StringWriter().use { sw ->
                     PrintWriter(sw).use { pw ->
                         e.printStackTrace(pw)
-                        println("Inner Exception Stack Trace:")
-                        println(sw.toString())
+                        logger.error("Inner Exception during serialization", e)
+                        logger.debug("Inner Exception Stack Trace: {}", sw.toString())
                         "\"Error during serialization: ${e.message}\nStack trace: ${sw.toString().escapeJson()}\""
                     }
                 }
@@ -78,8 +81,8 @@ private fun Any?.serializeValue(): String {
         StringWriter().use { sw ->
             PrintWriter(sw).use { pw ->
                 e.printStackTrace(pw)
-                println("Outer Exception Stack Trace:")
-                println(sw.toString())
+                logger.error("Outer Exception in serializeValue", e)
+                logger.debug("Outer Exception Stack Trace: {}", sw.toString())
                 "\"Error in main serializeValue: ${e.message}\nStack trace: ${sw.toString().escapeJson()}\""
             }
         }
