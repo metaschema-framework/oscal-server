@@ -280,8 +280,10 @@ class DocumentValidator(private val oscalDir: Path) {
         } catch (e: org.xml.sax.SAXParseException) {
             // Handle validation errors with line numbers
             throw Exception("XML validation failed: ${e.message} at line ${e.lineNumber}, column ${e.columnNumber}")
+        } catch (e: org.xml.sax.SAXParseException) {
+            throw Exception("XML validation failed: ${e.message} at line ${e.lineNumber}, column ${e.columnNumber}")
         } catch (e: Exception) {
-            throw Exception("XML validation failed: ${e.message}")
+            throw Exception("XML validation failed", e)
         }
     }
 
