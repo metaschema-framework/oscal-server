@@ -383,9 +383,6 @@ const Documents: React.FC = () => {
                         border: '1px solid var(--ion-border-color)',
                         boxShadow: '0 1px 2px var(--ion-color-step-100)'
                       }}>
-                        {(()=>{console.log(selectedDocument);
-                          return <></>
-                        })()}
                       <RenderOscal document={selectedDocument as OscalPackage}/>
                       </div>
                     </IonCardContent>

@@ -245,7 +245,9 @@ class DocumentValidator(private val oscalDir: Path) {
         })
         
         // Skip validation for constraint files themselves
-        if (inputPath.toString().contains("constraints") && inputPath.toString().contains("fedramp-external")) {
+        if (inputPath.toString().matches(".*constraints.*fedramp-external.*") || 
+            (Files.exists(inputPath) && Files.probeContentType(inputPath)?.contains("xml") == true && 
+             Files.readString(inputPath).contains("<metaschema-meta-constraints>"))) {
             logger.info("Input file is a constraint file, skipping validation")
             return
         }
@@ -280,32 +282,41 @@ class DocumentValidator(private val oscalDir: Path) {
         } catch (e: org.xml.sax.SAXParseException) {
             // Handle validation errors with line numbers
             throw Exception("XML validation failed: ${e.message} at line ${e.lineNumber}, column ${e.columnNumber}")
+        } catch (e: org.xml.sax.SAXParseException) {
+            throw Exception("XML validation failed: ${e.message} at line ${e.lineNumber}, column ${e.columnNumber}")
         } catch (e: Exception) {
-            throw Exception("XML validation failed: ${e.message}")
+            throw Exception("XML validation failed", e)
         }
     }
 
     private fun createBasicSarif(errorMessage: String): String {
         logger.debug("Creating SARIF output for error: $errorMessage")
         val version = OscalCliVersion().getVersion()
-        return """
-        {
-          "${'$'}schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-          "version": "2.1.0",
-          "runs": [
-            {
-              "tool": {
-                "driver": {
-                  "name": "OSCAL Server",
-                  "informationUri": "https://github.com/metaschema-framework/oscal-server",
-                  "version": "$version"
-                }
-              },
-              "results": [
-                {
-                  "message": {
-                    "text": "Error occurred during OSCAL command execution: $errorMessage"
-                  },
-        """.trimIndent()
+        val sarifObj = JSONObject()
+        sarifObj.put("\$schema", "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json")
+        sarifObj.put("version", "2.1.0")
+        
+        val runs = JSONObject()
+        val tool = JSONObject()
+        val driver = JSONObject()
+        driver.put("name", "OSCAL Server")
+        driver.put("informationUri", "https://github.com/metaschema-framework/oscal-server")
+        driver.put("version", version)
+        tool.put("driver", driver)
+        runs.put("tool", tool)
+        
+        val result = JSONObject()
+        val message = JSONObject()
+        message.put("text", "Error occurred during OSCAL command execution: $errorMessage")
+        result.put("message", message)
+        
+        val resultsArray = JSONArray()
+        resultsArray.put(result)
+        runs.put("results", resultsArray)
+        
+        val runsArray = JSONArray()
+        runsArray.put(runs)
+        sarifObj.put("runs", runsArray)
+        
+        return sarifObj.toString(2)
     }
-}
