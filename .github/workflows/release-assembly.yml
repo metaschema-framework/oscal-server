@@ -33,6 +33,18 @@ jobs:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: client/package-lock.json
+    - name: Build and install liboscal-java
+      run: |
+        cd lib/liboscal-java
+        mvn clean install -DskipTests
+        cd ../..
+
+    - name: Build and install metaschema-java
+      run: |
+        cd lib/metaschema-java
+        mvn clean install -DskipTests
+        cd ../..
+
     - name: Clean with Maven
       run: mvn clean
   
