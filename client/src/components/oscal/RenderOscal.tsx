@@ -10,6 +10,7 @@ import { RenderComponents } from './RenderComponents';
 import { RenderSystemCharacteristics } from './RenderSystemCharacteristics';
 import { RenderMerge } from './RenderMerge';
 import { RenderModify } from './RenderModify';
+import { UnifiedSearchFilter } from './UnifiedSearchFilter';
 import './RenderOscal.css';
 
 interface RenderOscalProps {
@@ -43,14 +44,35 @@ const renderError = (message: string) => (
   </IonAccordionGroup>
 );
 
-const renderCatalog = (content: Catalog) => (
-  <IonAccordionGroup>
-    {content?.metadata && <RenderMetadata metadata={content.metadata} />}
-    {content?.groups && <RenderGroups groups={content.groups} />}
-    {content?.controls && <RenderControls controls={content.controls} />}
-    {content?.['back-matter'] && <RenderBackMatter backMatter={content['back-matter']} />}
-  </IonAccordionGroup>
-);
+const renderCatalog = (content: Catalog) => {
+  // Create a unified catalog object for the search component
+  const unifiedCatalog = {
+    controls: content?.controls || [],
+    groups: content?.groups || []
+  };
+
+  return (
+    <IonAccordionGroup>
+      {content?.metadata && <RenderMetadata metadata={content.metadata} />}
+      
+      {/* Render a unified search component at the top level */}
+      {(content?.controls?.length || content?.groups?.length) && (
+        <IonAccordion value="search-filter">
+          <IonItem slot="header" color="light">
+            <IonLabel>Search Controls and Groups</IonLabel>
+          </IonItem>
+          <div className="ion-padding" slot="content">
+            <UnifiedSearchFilter catalog={unifiedCatalog} />
+          </div>
+        </IonAccordion>
+      )}
+      
+      {content?.groups && <RenderGroups groups={content.groups} />}
+      {content?.controls && <RenderControls controls={content.controls} />}
+      {content?.['back-matter'] && <RenderBackMatter backMatter={content['back-matter']} />}
+    </IonAccordionGroup>
+  );
+};
 
 const renderProfile = (content: Profile) => (
   <IonAccordionGroup>

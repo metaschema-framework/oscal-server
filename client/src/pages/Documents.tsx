@@ -41,6 +41,7 @@ import { useOscal } from "../context/OscalContext";
 import { ApiService, ConversionService } from "../services/api";
 import { OscalPackage } from "../types";
 import { JSONTree } from "react-json-tree";
+import "./Documents.css";
 
 interface DocumentEntry {
   id: string;
@@ -320,6 +321,11 @@ const Documents: React.FC = () => {
               <IonToolbar>
                 <IonInput
                     value={metapathExpression}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        handleMetapathQuery();
+                      }
+                    }}
                     onIonChange={(e) => setMetapathExpression(e.detail.value || "")}
                     placeholder="Enter metapath expression (e.g., //control)"
                   />

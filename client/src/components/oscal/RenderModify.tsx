@@ -16,18 +16,58 @@ export const RenderModify: React.FC<RenderModifyProps> = ({ modify }) => {
       </IonItem>
       <div className="ion-padding" slot="content">
         {modify['set-parameters'] && modify['set-parameters'].length > 0 && (
-          <div>
+          <div className="parameters-container">
             <h4>Parameter Settings</h4>
-            {modify['set-parameters']?.map((param, idx) => (
-              <div key={`param-${idx}`}>
-                <h5>Parameter ID: {param['param-id']}</h5>
-                {param.label && <p>Label: {param.label}</p>}
-                {param.values?.map((value, vidx) => (
-                  <p key={`value-${vidx}`}>Value: {value}</p>
-                ))}
-                {param.props && <RenderProps props={param.props} />}
-              </div>
-            ))}
+            <div className="parameters-grid">
+              {modify['set-parameters']?.map((param, idx) => (
+                <div key={`param-${idx}`} className="parameter-card">
+                  <div className="parameter-header">
+                    <span className="parameter-id">{param['param-id']}</span>
+                    {param.label && <span className="parameter-label">{param.label}</span>}
+                  </div>
+                  
+                  {param.values && param.values.length > 0 && (
+                    <div className="parameter-values">
+                      <h6>Values:</h6>
+                      <div className="value-chips">
+                        {param.values?.map((value, vidx) => (
+                          <span key={`value-${vidx}`} className="value-chip">
+                            {value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {JSON.stringify(param)}
+                    {param.constraints && param.constraints.length > 0 && (
+                    <div className="parameter-constraints">
+                      <h6>Constraints:</h6>
+                      <div className="value-chips">
+                        {param.constraints?.map((value, vidx) => (
+                          <span key={`value-${vidx}`} className="value-chip">
+                          {value.description}
+                        </span>
+                      ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {param.usage && (
+                    <div className="parameter-usage">
+                      <h6>Usage:</h6>
+                      <p>{param.usage}</p>
+                    </div>
+                  )}
+                  
+                  {param.props && (
+                    <div className="parameter-props">
+                      <h6>Properties:</h6>
+                      <RenderProps props={param.props} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
