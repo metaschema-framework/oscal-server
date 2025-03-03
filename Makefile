@@ -18,8 +18,8 @@ init-submodules:
 .PHONY: build-liboscal
 build-liboscal:
 	@echo "Building and installing liboscal-java..."
-	cd lib/liboscal-java 
-	mvn clean install -DskipTests 
+	cd lib/liboscal-java && \
+	mvn clean install -DskipTests
 
 # Build and install metaschema-java
 .PHONY: build-metaschema
@@ -44,28 +44,19 @@ build-client:
 .PHONY: compile
 compile:
 	@echo "Compiling the main project..."
-	. ./.env-liboscal && . ./.env-metaschema && \
-	mvn compile \
-	  -Dliboscal-java.version=$$LIBOSCAL_VERSION \
-	  -Dmetaschema-framework.version=$$METASCHEMA_VERSION
+	mvn compile
 
 # Package the main project with the correct versions
 .PHONY: package
 package:
 	@echo "Packaging the main project..."
-	. ./.env-liboscal && . ./.env-metaschema && \
-	mvn package \
-	  -Dliboscal-java.version=$$LIBOSCAL_VERSION \
-	  -Dmetaschema-framework.version=$$METASCHEMA_VERSION
+	mvn package
 
 # Create a release (for testing purposes)
 .PHONY: create-release
 create-release:
 	@echo "Creating a test release..."
-	. ./.env-liboscal && . ./.env-metaschema && \
-	VERSION=$$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout \
-	  -Dliboscal-java.version=$$LIBOSCAL_VERSION \
-	  -Dmetaschema-framework.version=$$METASCHEMA_VERSION) && \
+	VERSION=$$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) && \
 	echo "Project version: $$VERSION" && \
 	echo "Release artifact: ./target/server-$$VERSION-oscal-server.zip"
 
