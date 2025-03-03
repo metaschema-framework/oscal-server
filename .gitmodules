@@ -4,3 +4,6 @@
 [submodule "lib/metaschema-java"]
 	path = lib/metaschema-java
 	url = https://github.com/metaschema-framework/metaschema-java.git
+[submodule "client"]
+	path = client
+	url = https://github.com/metaschema-framework/oscal-editor.git
