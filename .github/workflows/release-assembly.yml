@@ -21,79 +21,22 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Initialize and update all submodules (including nested)
-      run: |
-        git submodule update --init --recursive
-        cd lib/liboscal-java
-        git submodule update --init --recursive
-        cd ../metaschema-java
-        git submodule update --init --recursive
-        cd ../../client
-        git submodule update --init --recursive
-        cd ..
-        
-    - name: Use compatible versions of submodules
-      run: |
-        cd lib/metaschema-java
-        git checkout v2.0.1
-        cd ../liboscal-java
-        git checkout v5.0.2
-        cd ../../client
-        # Using latest version of client (main branch) as it's a new repository
-        git checkout main
-        cd ..
-
     - name: Set up JDK 21
       uses: actions/setup-java@v3
       with:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
+        
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: client/package-lock.json
-    - name: Build and install liboscal-java
-      run: |
-        cd lib/liboscal-java
-        # Get the actual version from the pom.xml
-        LIBOSCAL_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-        echo "LIBOSCAL_VERSION=$LIBOSCAL_VERSION" >> $GITHUB_ENV
-        mvn clean install -DskipTests
-        cd ../..
-
-    - name: Build and install metaschema-java
-      run: |
-        cd lib/metaschema-java
-        # Get the actual version from the pom.xml
-        METASCHEMA_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-        echo "METASCHEMA_VERSION=$METASCHEMA_VERSION" >> $GITHUB_ENV
-        mvn clean install -DskipTests
-        cd ../..
-
-    - name: Clean with Maven
-      run: mvn clean
-  
-    - name: Build client
-      run: |
-        cd client
-        npm ci
-        npm run build
-        cd ..
-  
-    - name: Compile with Maven
-      run: |
-        mvn compile \
-          -Dliboscal-java.version=${{ env.LIBOSCAL_VERSION }} \
-          -Dmetaschema-framework.version=${{ env.METASCHEMA_VERSION }}
-  
-    - name: Package with Maven
-      run: |
-        mvn package \
-          -Dliboscal-java.version=${{ env.LIBOSCAL_VERSION }} \
-          -Dmetaschema-framework.version=${{ env.METASCHEMA_VERSION }}
+                
+    - name: Build using Makefile
+      run: make
 
     - name: Get version and set release info
       id: get_version
@@ -105,9 +48,7 @@ jobs:
           echo "RELEASE_NAME=Release $VERSION" >> $GITHUB_OUTPUT
           echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
         else
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout \
-            -Dliboscal-java.version=${{ env.LIBOSCAL_VERSION }} \
-            -Dmetaschema-framework.version=${{ env.METASCHEMA_VERSION }})
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           COMMIT_HASH=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date +'%Y%m%d%H%M%S')
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
