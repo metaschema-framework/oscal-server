@@ -2,7 +2,13 @@
 
 # Default target
 .PHONY: all
-all: init-submodules build-metaschema build-liboscal clean build-client compile package
+all: init-submodules clean-deps build-metaschema build-liboscal clean build-client compile package
+
+# Clean specific dependencies from Maven repository
+.PHONY: clean-deps
+clean-deps:
+	@echo "Cleaning dependencies from Maven repository..."
+	rm -rf $(HOME)/.m2/repository/dev/metaschema
 
 # Initialize and update all submodules (including nested ones)
 .PHONY: init-submodules
@@ -44,27 +50,27 @@ build-client:
 .PHONY: compile
 compile:
 	@echo "Compiling the main project..."
-	# Ensure the dependencies are available
-	[ -d "$(HOME)/.m2/repository/dev/metaschema/java/metaschema-databind-modules/2.2.0" ] || make build-metaschema
-	[ -d "$(HOME)/.m2/repository/dev/metaschema/oscal/liboscal-java/5.2.0" ] || make build-liboscal
+	# Always build the dependencies first to ensure they're available
+	make build-metaschema
+	make build-liboscal
 	mvn compile
 
 # Package the main project with the correct versions
 .PHONY: package
 package:
 	@echo "Packaging the main project..."
-	# Ensure the dependencies are available
-	[ -d "$(HOME)/.m2/repository/dev/metaschema/java/metaschema-databind-modules/2.2.0" ] || make build-metaschema
-	[ -d "$(HOME)/.m2/repository/dev/metaschema/oscal/liboscal-java/5.2.0" ] || make build-liboscal
+	# Always build the dependencies first to ensure they're available
+	make build-metaschema
+	make build-liboscal
 	mvn package
 
 # Create a release (for testing purposes)
 .PHONY: create-release
 create-release:
 	@echo "Creating a test release..."
-	# Ensure the dependencies are available
-	[ -d "$(HOME)/.m2/repository/dev/metaschema/java/metaschema-databind-modules/2.2.0" ] || make build-metaschema
-	[ -d "$(HOME)/.m2/repository/dev/metaschema/oscal/liboscal-java/5.2.0" ] || make build-liboscal
+	# Always build the dependencies first to ensure they're available
+	make build-metaschema
+	make build-liboscal
 	VERSION=$$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) && \
 	echo "Project version: $$VERSION" && \
 	echo "Release artifact: ./target/server-$$VERSION-oscal-server.zip"
