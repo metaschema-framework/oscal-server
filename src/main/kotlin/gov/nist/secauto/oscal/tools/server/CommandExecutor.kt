@@ -6,6 +6,7 @@
 package gov.nist.secauto.oscal.tools.server
 
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
+import gov.nist.secauto.metaschema.core.metapath.MetapathEvaluator
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.nio.file.Path

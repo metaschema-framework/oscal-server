@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
-package gov.nist.secauto.oscal.tools.server
+package gov.nist.secauto.metaschema.core.metapath
 
 import gov.nist.secauto.metaschema.cli.processor.ExitCode
 import gov.nist.secauto.metaschema.cli.processor.ExitStatus
 import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
 import gov.nist.secauto.metaschema.core.metapath.DynamicContext
-import gov.nist.secauto.metaschema.core.metapath.item.ISequence
 import gov.nist.secauto.metaschema.core.metapath.MetapathExpression
 import gov.nist.secauto.metaschema.core.metapath.StaticContext
 import gov.nist.secauto.metaschema.core.metapath.item.IItem
@@ -64,7 +63,7 @@ class MetapathEvaluator {
                     }
 
                     logger.debug("Evaluating metapath expression...")
-                    val sequence: ISequence<INodeItem> = compiledMetapath.evaluate(item, dynamicContext)
+                    val sequence = compiledMetapath.evaluate<INodeItem>(item, dynamicContext)
 
                     // Write result to string
                     logger.debug("Writing evaluation results...")
