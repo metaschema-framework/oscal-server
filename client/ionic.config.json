@@ -1,8 +1,0 @@
-{
-  "name": "oscal-editor",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "react-vite",
-  "id": "138034a7"
-}
