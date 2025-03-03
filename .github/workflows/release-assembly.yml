@@ -77,19 +77,12 @@ jobs:
     - name: Clean with Maven
       run: mvn clean
   
-    - name: Build client with retry mechanism
+    - name: Build client
       run: |
-        MAX_RETRIES=5
-        RETRY_COUNT=0
-        until cd client && npm ci && npm run build && cd ..; do
-          RETRY_COUNT=$((RETRY_COUNT+1))
-          if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-            echo "Failed to build client after $MAX_RETRIES attempts"
-            exit 1
-          fi
-          echo "Build failed, retrying ($RETRY_COUNT/$MAX_RETRIES)..."
-          sleep 5
-        done
+        cd client
+        npm ci
+        npm run build
+        cd ..
   
     - name: Compile with Maven
       run: |

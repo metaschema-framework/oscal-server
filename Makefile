@@ -11,6 +11,7 @@ init-submodules:
 	git submodule update --init --recursive
 	cd lib/liboscal-java && git submodule update --init --recursive
 	cd lib/metaschema-java && git submodule update --init --recursive
+	cd client && git submodule update --init --recursive
 
 
 # Build and install liboscal-java
