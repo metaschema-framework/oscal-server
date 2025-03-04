@@ -50,9 +50,5 @@ jobs:
         # Initialize submodules
         make init-submodules
         
-        # Explicitly build dependencies first
-        make build-metaschema
-        make build-liboscal OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
-        
-        # Run tests
-        mvn test
+        # Run tests (this will build dependencies, client, and run tests)
+        make test OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
