@@ -191,11 +191,23 @@ class OscalVerticle : CoroutineVerticle() {
             }
             
         // Resolve profile routes
+        router.get("/resolve").handler { ctx ->
+            launch(vertx.dispatcher()) {
+                requestHandler.handleResolveRequest(ctx)
+            }
+        }
         router.get("/resolve-profile").handler { ctx ->
             launch(vertx.dispatcher()) {
                 requestHandler.handleResolveRequest(ctx)
             }
         }
+        router.post("/resolve")
+            .handler(directRouteBodyHandler)
+            .handler { ctx ->
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleResolveFileUpload(ctx)
+                }
+            }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
