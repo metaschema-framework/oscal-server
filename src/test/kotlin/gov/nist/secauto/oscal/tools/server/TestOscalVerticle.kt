@@ -3,12 +3,13 @@ import java.nio.file.Files
 import io.vertx.core.Vertx
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
-import io.vertx.ext.unit.TestContext
-import io.vertx.ext.unit.junit.VertxUnitRunner
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
+import io.vertx.junit5.VertxExtension
+import io.vertx.junit5.VertxTestContext
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.io.File
@@ -19,32 +20,24 @@ import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 
-@RunWith(VertxUnitRunner::class)
+@ExtendWith(VertxExtension::class)
 class TestOscalVerticle {
     private val logger: Logger = LogManager.getLogger(TestOscalVerticle::class.java)
     private lateinit var vertx: Vertx
     private lateinit var webClient: WebClient
 
-    @Before
-    fun setUp(testContext: TestContext) {
-        vertx = Vertx.vertx()
+    @BeforeEach
+    fun setUp(vertx: Vertx, testContext: VertxTestContext) {
+        this.vertx = vertx
         webClient = WebClient.create(vertx, WebClientOptions().setDefaultPort(8888))
         initializeOscalDirectory()
 
-        val async = testContext.async()
-        vertx.deployVerticle(OscalVerticle()) { ar ->
-            if (ar.succeeded()) {
-                async.complete()
-            } else {
-                testContext.fail(ar.cause())
-            }
-        }
+        vertx.deployVerticle(OscalVerticle())
+            .onComplete(testContext.succeedingThenComplete())
     }
 
     @Test
-    fun test_performance_validation(testContext: TestContext) {
-        val async = testContext.async()
-
+    fun test_performance_validation(testContext: VertxTestContext) {
         try {
             // Download base test file
             val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
@@ -69,15 +62,17 @@ class TestOscalVerticle {
             fun validateNext() {
                 if (currentIndex >= testFiles.size) {
                     // All files processed - report results
-                    val avgTime = totalTime / successCount
+                    val avgTime = if (successCount > 0) totalTime / successCount else 0
                     logger.info("Performance Test Results:")
                     logger.info("Total files: ${testFiles.size}")
                     logger.info("Successful validations: $successCount")
                     logger.info("Average time per validation: ${avgTime}ms")
                     logger.info("Total time: ${totalTime}ms")
                     
-                    testContext.assertTrue(successCount > 0, "At least one validation should succeed")
-                    async.complete()
+                    testContext.verify {
+                        assert(successCount > 0) { "At least one validation should succeed" }
+                    }
+                    testContext.completeNow()
                     return
                 }
 
@@ -106,33 +101,28 @@ class TestOscalVerticle {
 
         } catch (e: Exception) {
             logger.error("Performance test failed", e)
-            testContext.fail(e)
+            testContext.failNow(e)
         }
     }
 
-    @After
-    fun tearDown(testContext: TestContext) {
-        vertx.close(testContext.asyncAssertSuccess())
+    @AfterEach
+    fun tearDown(testContext: VertxTestContext) {
+        vertx.close().onComplete(testContext.succeedingThenComplete())
     }
 
     @Test
-    fun test_oscal_command_remote(testContext: TestContext) {
-        val async = testContext.async()
-
+    fun test_oscal_command_remote(testContext: VertxTestContext) {
         webClient.get("/validate")
             .addQueryParam("document", "https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
-            .send { ar ->
-                if (ar.succeeded()) {
-                    val response = ar.result()
-                    testContext.assertEquals(200, response.statusCode())
+            .send(testContext.succeeding { response -> 
+                testContext.verify { 
+                    assertEquals(200, response.statusCode())
                     val body = response.bodyAsJsonObject()
-                    testContext.assertNotNull(body)
-                    testContext.assertTrue(body.containsKey("runs"))
-                    async.complete()
-                } else {
-                    testContext.fail(ar.cause())
+                    assertNotNull(body)
+                    assertTrue(body.containsKey("runs"))
+                    testContext.completeNow()
                 }
-            }
+            })
     }
     private fun initializeOscalDirectory() {
         val homeDir = System.getProperty("user.home")
@@ -147,9 +137,7 @@ class TestOscalVerticle {
     }
     
     @Test
-    fun test_oscal_command_local_file(testContext: TestContext) {
-        val async = testContext.async()
-
+    fun test_oscal_command_local_file(testContext: VertxTestContext) {
         try {
             // Download the file
             val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
@@ -168,8 +156,8 @@ class TestOscalVerticle {
                 logger.info("Created temporary file: $tempFile")
             } catch (e: Exception) {
                 logger.error("Failed to create temporary file in $oscalDir", e)
-                testContext.fail("Failed to create temporary file: ${e.message}")
-                return@test_oscal_command_local_file
+                testContext.failNow(e)
+                return
             }
 
             val tempFilePath = tempFile.toAbsolutePath()
@@ -184,7 +172,7 @@ class TestOscalVerticle {
                     logger.info("Successfully downloaded content to $tempFile")
                 } catch (e: Exception) {
                     logger.error("Failed to download or write content", e)
-                    testContext.fail("Failed to download or write content: ${e.message}")
+                    testContext.failNow(e)
                     return@runBlocking
                 }
             }
@@ -193,31 +181,24 @@ class TestOscalVerticle {
 
             webClient.get("/validate")
                 .addQueryParam("document", fileUrl)
-                .send { ar ->
-                    if (ar.succeeded()) {
-                        val response = ar.result()
-                        testContext.assertEquals(200, response.statusCode())
+                .send(testContext.succeeding { response ->
+                    testContext.verify {
+                        assertEquals(200, response.statusCode())
                         val body = response.bodyAsJsonObject()
-                        testContext.assertEquals("OK", response.getHeader("Exit-Status"))
-                        testContext.assertNotNull(body)
-                        testContext.assertTrue(body.containsKey("runs"))
-                        async.complete()
-                    } else {
-                        logger.error("Validation request failed", ar.cause())
-                        testContext.fail(ar.cause())
+                        assertEquals("OK", response.getHeader("Exit-Status"))
+                        assertNotNull(body)
+                        assertTrue(body.containsKey("runs"))
+                        testContext.completeNow()
                     }
-
-                }
+                })
         } catch (e: Exception) {
             logger.error("Unexpected error in test", e)
-            testContext.fail(e)
+            testContext.failNow(e)
         }
     }
 
     @Test
-    fun test_oscal_command_resolve(testContext: TestContext) {
-        val async = testContext.async()
-
+    fun test_oscal_command_resolve(testContext: VertxTestContext) {
         val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/master/src/content/rev5/baselines/xml/FedRAMP_rev5_LI-SaaS-baseline_profile.xml")
         val catalogUrl = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/master/src/content/rev5/baselines/xml/NIST_SP-800-53_rev5_catalog.xml")
 
@@ -230,19 +211,15 @@ class TestOscalVerticle {
             webClient.get("/resolve")
                 .addQueryParam("document", fileUri)
                 .putHeader("Accept", "application/json")
-                .send { ar ->
-                    if (ar.succeeded()) {
-                        val response = ar.result()
-                        testContext.assertEquals(200, response.statusCode())
+                .send(testContext.succeeding { response ->
+                    testContext.verify {
+                        assertEquals(200, response.statusCode())
                         val body = response.bodyAsJsonObject()
-                        testContext.assertEquals("OK", response.getHeader("Exit-Status"))
-                        testContext.assertNotNull(body)
-                        async.complete()
-                    } else {
-                        logger.error("Resolve request failed", ar.cause())
-                        testContext.fail(ar.cause())
+                        assertEquals("OK", response.getHeader("Exit-Status"))
+                        assertNotNull(body)
+                        testContext.completeNow()
                     }
-                }
+                })
         } finally {
             // Files.deleteIfExists(tempFile)
             // Files.deleteIfExists(catalogFile)
@@ -250,9 +227,7 @@ class TestOscalVerticle {
     }
 
     @Test
-    fun test_oscal_command_convert(testContext: TestContext) {
-        val async = testContext.async()
-
+    fun test_oscal_command_convert(testContext: VertxTestContext) {
         val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/main/examples/catalog/xml/basic-catalog.xml")
         val tempFile = downloadToTempFile(url, "convert", ".xml")
 
@@ -262,19 +237,15 @@ class TestOscalVerticle {
             webClient.get("/convert")
                 .addQueryParam("document", fileUri)
                 .putHeader("Accept", "application/json")
-                .send { ar ->
-                    if (ar.succeeded()) {
-                        val response = ar.result()
-                        testContext.assertEquals(200, response.statusCode())
+                .send(testContext.succeeding { response ->
+                    testContext.verify {
+                        assertEquals(200, response.statusCode())
                         val body = response.bodyAsJsonObject()
-                        testContext.assertEquals("OK", response.getHeader("Exit-Status"))
-                        testContext.assertNotNull(body)
-                        async.complete()
-                    } else {
-                        logger.error("Convert request failed", ar.cause())
-                        testContext.fail(ar.cause())
+                        assertEquals("OK", response.getHeader("Exit-Status"))
+                        assertNotNull(body)
+                        testContext.completeNow()
                     }
-                }
+                })
         } finally {
             // Files.deleteIfExists(tempFile)
         }
@@ -322,9 +293,7 @@ class TestOscalVerticle {
         return catalogFile
     }
     @Test
-    fun test_validate_with_constraint_increases_rule_count(testContext: TestContext) {
-        val async = testContext.async()
-
+    fun test_validate_with_constraint_increases_rule_count(testContext: VertxTestContext) {
         try {
             // Download and save test files
             val sspUrl = URL("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/content/ssp-attachment-type-INVALID.xml")
@@ -343,7 +312,6 @@ class TestOscalVerticle {
                 .send { arWithoutConstraint ->
                     if (arWithoutConstraint.succeeded()) {
                         val responseWithoutConstraint = arWithoutConstraint.result()
-                        testContext.assertEquals(200, responseWithoutConstraint.statusCode())
                         val sarifWithoutConstraint = responseWithoutConstraint.bodyAsString()
                         val ruleCountWithoutConstraint = (sarifWithoutConstraint).length
 
@@ -355,29 +323,32 @@ class TestOscalVerticle {
                             .send { arWithConstraint ->
                                 if (arWithConstraint.succeeded()) {
                                     val responseWithConstraint = arWithConstraint.result()
-                                    testContext.assertEquals(200, responseWithConstraint.statusCode())
                                     val sarifWithConstraint = responseWithConstraint.bodyAsString()
                                     val ruleCountWithConstraint = (sarifWithConstraint).length
 
                                     // Verify that the number of rules has increased
-                                    testContext.assertTrue(ruleCountWithConstraint > ruleCountWithoutConstraint,
-                                        "Rule count with constraint ($ruleCountWithConstraint) should be greater than without constraint ($ruleCountWithoutConstraint)")
-                                    testContext.assertTrue(sarifWithConstraint.contains("resource-has-title"))
-                                    testContext.assertFalse(sarifWithoutConstraint.contains("resource-has-title"))
-                                    async.complete()
+                                    testContext.verify {
+                                        assertEquals(200, responseWithoutConstraint.statusCode())
+                                        assertEquals(200, responseWithConstraint.statusCode())
+                                        assertTrue(ruleCountWithConstraint > ruleCountWithoutConstraint,
+                                            "Rule count with constraint ($ruleCountWithConstraint) should be greater than without constraint ($ruleCountWithoutConstraint)")
+                                        assertTrue(sarifWithConstraint.contains("resource-has-title"))
+                                        assertFalse(sarifWithoutConstraint.contains("resource-has-title"))
+                                        testContext.completeNow()
+                                    }
                                 } else {
                                     logger.error("Validation with constraint request failed", arWithConstraint.cause())
-                                    testContext.fail(arWithConstraint.cause())
+                                    testContext.failNow(arWithConstraint.cause())
                                 }
                             }
                     } else {
                         logger.error("Validation without constraint request failed", arWithoutConstraint.cause())
-                        testContext.fail(arWithoutConstraint.cause())
+                        testContext.failNow(arWithoutConstraint.cause())
                     }
                 }
         } catch (e: Exception) {
             logger.error("Unexpected error in test", e)
-            testContext.fail(e)
+            testContext.failNow(e)
         }
     }
 

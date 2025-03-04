@@ -181,23 +181,29 @@
       <scope>test</scope>
     </dependency>
    <dependency>
-  <groupId>org.junit.jupiter</groupId>
-  <artifactId>junit-jupiter-api</artifactId>
-  <version>5.10.1</version>
-  <scope>test</scope>
-</dependency>
-<dependency>
-  <groupId>org.junit.jupiter</groupId>
-  <artifactId>junit-jupiter-engine</artifactId>
-  <version>5.10.1</version>
-  <scope>test</scope>
-</dependency>
-<dependency>
-  <groupId>org.junit.platform</groupId>
-  <artifactId>junit-platform-launcher</artifactId>
-  <version>1.10.1</version>
-  <scope>test</scope>
-</dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+      <version>${vertx.version}</version>
+      <scope>test</scope>
+    </dependency>
+   <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.10.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.10.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>1.10.1</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-web-openapi</artifactId>
