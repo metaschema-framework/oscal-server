@@ -73,17 +73,25 @@ class ProfileResolverService {
                         }
                     }
                     
-                    logger.debug("Resolving profile...")
-                    val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
-                    
-                    // Serialize resolved profile to the output
-                    logger.debug("Serializing resolved profile...")
-                    Files.newOutputStream(outputPath).use { out ->
-                        context.newSerializer(outputFormat, resolvedProfile.javaClass).serialize(resolvedProfile, out)
+                    logger.info("Resolving profile...")
+                    try {
+                        val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
+                        logger.info("Profile resolved successfully")
+                        
+                        // Serialize resolved profile to the output
+                        logger.info("Serializing resolved profile...")
+                        Files.newOutputStream(outputPath).use { out ->
+                            context.newSerializer(outputFormat, resolvedProfile.javaClass).serialize(resolvedProfile, out)
+                        }
+                        logger.info("Profile resolution completed successfully")
+                        
+                        MessageExitStatus(ExitCode.OK, "Profile resolution completed successfully")
+                    } catch (e: Exception) {
+                        logger.error("Error resolving profile: ${e.message}", e)
+                        e.printStackTrace()
+                        throw e
                     }
-                    logger.info("Profile resolution completed successfully")
                     
-                    MessageExitStatus(ExitCode.OK, "Profile resolution completed successfully")
                 } catch (e: Exception) {
                     val errorMsg = when (e) {
                         is IllegalArgumentException -> e.message ?: "Invalid input"
