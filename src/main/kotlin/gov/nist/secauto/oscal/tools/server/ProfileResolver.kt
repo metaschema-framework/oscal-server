@@ -58,9 +58,21 @@ class ProfileResolverService {
                     }
                     logger.info("Profile loaded successfully")
                     
-                    // Create resolver and resolve profile directly from input path
+                    // Create resolver and resolve profile
                     logger.debug("Creating profile resolver...")
                     val resolver = ProfileResolver()
+                    
+                    // Log the parent directory to help with debugging
+                    val parentDir = inputPath.parent
+                    logger.info("Looking for catalog files in: $parentDir")
+                    
+                    // List files in the parent directory to help with debugging
+                    if (Files.exists(parentDir)) {
+                        Files.list(parentDir).forEach { file ->
+                            logger.info("Found file in parent directory: $file")
+                        }
+                    }
+                    
                     logger.debug("Resolving profile...")
                     val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
                     

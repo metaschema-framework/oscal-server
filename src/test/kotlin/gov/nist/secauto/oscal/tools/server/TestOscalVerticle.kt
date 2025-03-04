@@ -112,17 +112,29 @@ class TestOscalVerticle {
 
     @Test
     fun test_oscal_command_remote(testContext: VertxTestContext) {
-        webClient.get("/validate")
-            .addQueryParam("document", "https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
-            .send(testContext.succeeding { response -> 
-                testContext.verify { 
-                    assertEquals(200, response.statusCode())
-                    val body = response.bodyAsJsonObject()
-                    assertNotNull(body)
-                    assertTrue(body.containsKey("runs"))
-                    testContext.completeNow()
-                }
-            })
+        try {
+            // Download the file first
+            val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            val tempFile = downloadToTempFile(url, "remote-test", ".xml")
+            val fileUri = tempFile.toUri().toString()
+            
+            logger.info("Testing remote validation with local file: $fileUri")
+            
+            webClient.get("/validate")
+                .addQueryParam("document", fileUri)
+                .send(testContext.succeeding { response -> 
+                    testContext.verify { 
+                        assertEquals(200, response.statusCode())
+                        val body = response.bodyAsJsonObject()
+                        assertNotNull(body)
+                        assertTrue(body.containsKey("runs"))
+                        testContext.completeNow()
+                    }
+                })
+        } catch (e: Exception) {
+            logger.error("Error in remote validation test", e)
+            testContext.failNow(e)
+        }
     }
     private fun initializeOscalDirectory() {
         val homeDir = System.getProperty("user.home")
@@ -206,7 +218,18 @@ class TestOscalVerticle {
         val catalogFile = downloadCatalog(catalogUrl, tempFile.parent)
 
         try {
+            // Ensure the catalog file has the expected name that the resolver will look for
+            // The profile typically references the catalog by a specific name
+            val expectedCatalogName = "NIST_SP-800-53_rev5_catalog.xml"
+            val renamedCatalogFile = tempFile.parent.resolve(expectedCatalogName)
+            if (catalogFile.fileName.toString() != expectedCatalogName) {
+                Files.copy(catalogFile, renamedCatalogFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                logger.info("Renamed catalog file to: $renamedCatalogFile")
+            }
+
             val fileUri = tempFile.toUri().toString()
+            logger.info("Resolving profile at: $fileUri")
+            logger.info("Catalog file at: $renamedCatalogFile")
 
             webClient.get("/resolve")
                 .addQueryParam("document", fileUri)
