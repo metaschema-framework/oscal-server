@@ -90,7 +90,8 @@ class ProfileResolverService {
                             }
                         }
                         
-                        val resolver = ProfileResolver(ProfileResolver.newDynamicContext(), customResolver)
+                        // Create a new resolver with our custom URI resolver
+                        val resolver = ProfileResolver(null, customResolver)
                         
                         val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
                         logger.info("Profile resolved successfully")
