@@ -73,9 +73,8 @@ class ProfileResolverService {
                         }
                     }
                     
-                    // Try to resolve the profile directly from the document object
-                    logger.debug("Resolving profile from document object...")
-                    val resolvedProfile = resolver.resolve(document) as IBoundObject
+                    logger.debug("Resolving profile...")
+                    val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
                     
                     // Serialize resolved profile to the output
                     logger.debug("Serializing resolved profile...")
