@@ -245,8 +245,7 @@ class OscalVerticle : CoroutineVerticle() {
                 // Configure deployment options
                 val deploymentOptions = DeploymentOptions()
                     .setInstances(1)
-                    // Using non-deprecated method
-                    .setDeploymentWorker(false)
+                    .setWorker(false)
 
                 // Deploy verticle and handle result
                 vertx.deployVerticle(OscalVerticle(), deploymentOptions) { ar ->
