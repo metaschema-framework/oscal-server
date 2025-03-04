@@ -16,7 +16,7 @@ import io.vertx.core.VertxOptions
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.kotlin.coroutines.dispatcher
-import kotlinx.coroutines.launch
+import io.vertx.kotlin.coroutines.executeBlocking
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import java.nio.file.Path
@@ -92,44 +92,44 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Configure upload operations with direct body content
         routerBuilder.operation("validateUpload").handler { ctx -> 
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleValidateFileUpload(ctx)
             }
         }
         routerBuilder.operation("resolveUpload").handler { ctx -> 
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleResolveFileUpload(ctx)
             }
         }
         routerBuilder.operation("convertUpload").handler { ctx -> 
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleConvertFileUpload(ctx)
             }
         }
         routerBuilder.operation("queryUpload").handler { ctx -> 
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleQueryFileUpload(ctx)
             }
         }
         
         // Handle regular operations with suspend functions
         routerBuilder.operation("validate").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleValidateRequest(ctx)
             }
         }
         routerBuilder.operation("resolve").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleResolveRequest(ctx)
             }
         }
         routerBuilder.operation("convert").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleConvertRequest(ctx)
             }
         }
         routerBuilder.operation("query").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleQueryRequest(ctx)
             }
         }
@@ -164,54 +164,54 @@ class OscalVerticle : CoroutineVerticle() {
         
         // Validate routes
         router.get("/validate").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleValidateRequest(ctx)
             }
         }
         router.post("/validate")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                launch(vertx.dispatcher()) {
+                executeBlocking {
                     requestHandler.handleValidateFileUpload(ctx)
                 }
             }
             
         // Convert routes
         router.get("/convert").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleConvertRequest(ctx)
             }
         }
         router.post("/convert")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                launch(vertx.dispatcher()) {
+                executeBlocking {
                     requestHandler.handleConvertFileUpload(ctx)
                 }
             }
             
         // Resolve profile routes
         router.get("/resolve").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleResolveRequest(ctx)
             }
         }
         router.get("/resolve-profile").handler { ctx ->
-            launch(vertx.dispatcher()) {
+            executeBlocking {
                 requestHandler.handleResolveRequest(ctx)
             }
         }
         router.post("/resolve")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                launch(vertx.dispatcher()) {
+                executeBlocking {
                     requestHandler.handleResolveFileUpload(ctx)
                 }
             }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                launch(vertx.dispatcher()) {
+                executeBlocking {
                     requestHandler.handleResolveFileUpload(ctx)
                 }
             }
