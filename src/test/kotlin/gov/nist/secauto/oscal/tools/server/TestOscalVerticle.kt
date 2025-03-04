@@ -213,13 +213,14 @@ class TestOscalVerticle {
     fun test_oscal_command_resolve_high_baseline(testContext: VertxTestContext) {
         val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/content/rev5/baselines/xml/FedRAMP_rev5_HIGH-baseline_profile.xml")
 
-        val tempFile = downloadToTempFile(url, "resolve-high", ".xml")
+        val file = downloadFile(url)
+        downloadFile(URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/content/rev5/baselines/xml/FedRAMP_rev5_catalog_tailoring_profile.xml"));
 
         try {
             // Ensure the catalog file has the expected name that the resolver will look for
             // The profile typically references the catalog by a specific name
 
-            val fileUri = tempFile.toUri().toString()
+            val fileUri = file.toUri().toString()
             logger.info("Resolving HIGH baseline profile at: $fileUri")
 
             webClient.get("/resolve")
@@ -240,8 +241,7 @@ class TestOscalVerticle {
                     }
                 })
         } finally {
-            // Files.deleteIfExists(tempFile)
-            // Files.deleteIfExists(catalogFile)
+            // Files.deleteIfExists(file)
         }
     }
 
@@ -290,6 +290,31 @@ class TestOscalVerticle {
         }
 
         return tempFile
+    }
+    
+    private fun downloadFile(url: URL): Path {
+        val homeDir = System.getProperty("user.home")
+        val oscalDir = Paths.get(homeDir, ".oscal")
+        
+        // Extract the original filename from the URL
+        val fileName = Paths.get(url.path).fileName.toString()
+        val file = oscalDir.resolve(fileName)
+
+        runBlocking {
+            try {
+                url.openStream().use { input ->
+                    Files.newOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                logger.info("Successfully downloaded content to $file with original filename")
+            } catch (e: Exception) {
+                logger.error("Failed to download or write content", e)
+                throw e
+            }
+        }
+
+        return file
     }
     private fun downloadCatalog(catalogUrl: URL, targetDir: Path): Path {
         val catalogFileName = Paths.get(catalogUrl.path).fileName
@@ -370,5 +395,6 @@ class TestOscalVerticle {
             testContext.failNow(e)
         }
     }
+
 
 }
