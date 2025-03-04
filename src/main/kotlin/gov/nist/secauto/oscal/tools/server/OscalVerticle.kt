@@ -16,7 +16,7 @@ import io.vertx.core.VertxOptions
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.kotlin.coroutines.dispatcher
-import io.vertx.kotlin.coroutines.executeBlocking
+import kotlinx.coroutines.launch
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import java.nio.file.Path
@@ -92,46 +92,102 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Configure upload operations with direct body content
         routerBuilder.operation("validateUpload").handler { ctx -> 
-            executeBlocking {
-                requestHandler.handleValidateFileUpload(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleValidateFileUpload(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         routerBuilder.operation("resolveUpload").handler { ctx -> 
-            executeBlocking {
-                requestHandler.handleResolveFileUpload(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleResolveFileUpload(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         routerBuilder.operation("convertUpload").handler { ctx -> 
-            executeBlocking {
-                requestHandler.handleConvertFileUpload(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleConvertFileUpload(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         routerBuilder.operation("queryUpload").handler { ctx -> 
-            executeBlocking {
-                requestHandler.handleQueryFileUpload(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleQueryFileUpload(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         
         // Handle regular operations with suspend functions
         routerBuilder.operation("validate").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleValidateRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleValidateRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         routerBuilder.operation("resolve").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleResolveRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleResolveRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         routerBuilder.operation("convert").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleConvertRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleConvertRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         routerBuilder.operation("query").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleQueryRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleQueryRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
 
         // Handle package operations
@@ -164,56 +220,112 @@ class OscalVerticle : CoroutineVerticle() {
         
         // Validate routes
         router.get("/validate").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleValidateRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleValidateRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         router.post("/validate")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                executeBlocking {
-                    requestHandler.handleValidateFileUpload(ctx)
-                }
+                vertx.executeBlocking<Void>({ promise ->
+                    try {
+                        launch(vertx.dispatcher()) {
+                            requestHandler.handleValidateFileUpload(ctx)
+                        }
+                        promise.complete()
+                    } catch (e: Exception) {
+                        promise.fail(e)
+                    }
+                }, false, null)
             }
             
         // Convert routes
         router.get("/convert").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleConvertRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleConvertRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         router.post("/convert")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                executeBlocking {
-                    requestHandler.handleConvertFileUpload(ctx)
-                }
+                vertx.executeBlocking<Void>({ promise ->
+                    try {
+                        launch(vertx.dispatcher()) {
+                            requestHandler.handleConvertFileUpload(ctx)
+                        }
+                        promise.complete()
+                    } catch (e: Exception) {
+                        promise.fail(e)
+                    }
+                }, false, null)
             }
             
         // Resolve profile routes
         router.get("/resolve").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleResolveRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleResolveRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         router.get("/resolve-profile").handler { ctx ->
-            executeBlocking {
-                requestHandler.handleResolveRequest(ctx)
-            }
+            vertx.executeBlocking<Void>({ promise ->
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleResolveRequest(ctx)
+                    }
+                    promise.complete()
+                } catch (e: Exception) {
+                    promise.fail(e)
+                }
+            }, false, null)
         }
         router.post("/resolve")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                executeBlocking {
-                    requestHandler.handleResolveFileUpload(ctx)
-                }
+                vertx.executeBlocking<Void>({ promise ->
+                    try {
+                        launch(vertx.dispatcher()) {
+                            requestHandler.handleResolveFileUpload(ctx)
+                        }
+                        promise.complete()
+                    } catch (e: Exception) {
+                        promise.fail(e)
+                    }
+                }, false, null)
             }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                executeBlocking {
-                    requestHandler.handleResolveFileUpload(ctx)
-                }
+                vertx.executeBlocking<Void>({ promise ->
+                    try {
+                        launch(vertx.dispatcher()) {
+                            requestHandler.handleResolveFileUpload(ctx)
+                        }
+                        promise.complete()
+                    } catch (e: Exception) {
+                        promise.fail(e)
+                    }
+                }, false, null)
             }
 
         // Add static file handler last
