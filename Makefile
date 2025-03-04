@@ -75,6 +75,7 @@ package:
 	# Always build the dependencies first to ensure they're available
 	make build-metaschema
 	make build-liboscal
+	make build-client
 	mvn package
 
 # Run unit tests
@@ -84,6 +85,7 @@ test:
 	# Always build the dependencies first to ensure they're available
 	make build-metaschema
 	make build-liboscal
+	make build-client
 	mvn test
 
 # Create a release (for testing purposes)
@@ -93,6 +95,7 @@ create-release:
 	# Always build the dependencies first to ensure they're available
 	make build-metaschema
 	make build-liboscal
+	make build-client
 	VERSION=$$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout) && \
 	echo "Project version: $$VERSION" && \
 	echo "Release artifact: ./target/server-$$VERSION-oscal-server.zip"
