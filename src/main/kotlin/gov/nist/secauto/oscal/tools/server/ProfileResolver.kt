@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -75,6 +76,17 @@ class ProfileResolverService {
                     
                     logger.info("Resolving profile...")
                     try {
+                        // Add a custom URI resolver that logs the resolution process
+                        val customResolver = object : ProfileResolver.UriResolver {
+                            override fun resolve(uri: URI, source: URI): URI {
+                                val resolved = source.resolve(uri)
+                                logger.info("Resolving URI: $uri against source: $source => $resolved")
+                                return resolved
+                            }
+                        }
+                        
+                        val resolver = ProfileResolver(ProfileResolver.newDynamicContext(), customResolver)
+                        
                         val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
                         logger.info("Profile resolved successfully")
                         
