@@ -1,5 +1,9 @@
 # Makefile for OSCAL Server Release Assembly
 
+# Default variables for OSCAL repository
+OSCAL_REPO ?= https://github.com/usnistgov/OSCAL.git
+OSCAL_VERSION ?= main
+
 # Default target
 .PHONY: all
 all: init-submodules clean-deps build-metaschema build-liboscal clean build-client compile package
@@ -30,8 +34,15 @@ build-metaschema:
 # Build and install liboscal-java (depends on metaschema-java)
 .PHONY: build-liboscal
 build-liboscal:
-	@echo "Building and installing liboscal-java..."
+	@echo "Building and installing liboscal-java with OSCAL repo: $(OSCAL_REPO) and version: $(OSCAL_VERSION)..."
 	cd lib/liboscal-java && \
+	git submodule deinit -f oscal && \
+	git rm -f oscal && \
+	git submodule add $(OSCAL_REPO) oscal && \
+	cd oscal && \
+	git fetch && \
+	git checkout $(OSCAL_VERSION) && \
+	cd .. && \
 	mvn clean install -DskipTests
 
 # Clean the main project
@@ -64,6 +75,15 @@ package:
 	make build-liboscal
 	mvn package
 
+# Run unit tests
+.PHONY: test
+test:
+	@echo "Running unit tests..."
+	# Always build the dependencies first to ensure they're available
+	make build-metaschema
+	make build-liboscal
+	mvn test
+
 # Create a release (for testing purposes)
 .PHONY: create-release
 create-release:
@@ -89,9 +109,16 @@ help:
 	@echo "  build-client      - Build the client"
 	@echo "  compile           - Compile the main project"
 	@echo "  package           - Package the main project"
+	@echo "  test              - Run unit tests"
 	@echo "  create-release    - Create a test release"
 	@echo "  help              - Show this help message"
 	@echo ""
-	@echo "Usage example:"
-	@echo "  make              - Run the complete build process"
-	@echo "  make help         - Show this help message"
+	@echo "Parameters:"
+	@echo "  OSCAL_REPO        - Git repository URL for OSCAL (default: https://github.com/usnistgov/OSCAL.git)"
+	@echo "  OSCAL_VERSION     - Git branch, tag, or commit hash for OSCAL (default: main)"
+	@echo ""
+	@echo "Usage examples:"
+	@echo "  make                                                  - Run the complete build process with default OSCAL version"
+	@echo "  make OSCAL_VERSION=v1.1.0                            - Run with OSCAL v1.1.0"
+	@echo "  make OSCAL_REPO=https://github.com/fork/OSCAL.git OSCAL_VERSION=feature-branch - Run with custom repo and branch"
+	@echo "  make help                                             - Show this help message"
