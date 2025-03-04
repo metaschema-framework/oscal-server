@@ -16,7 +16,7 @@ import io.vertx.core.VertxOptions
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.kotlin.coroutines.dispatcher
-import kotlinx.coroutines.launch
+import java.util.concurrent.Callable
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import java.nio.file.Path
@@ -92,86 +92,102 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Configure upload operations with direct body content
         routerBuilder.operation("validateUpload").handler { ctx -> 
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleValidateFileUpload(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling validateUpload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling validateUpload", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         routerBuilder.operation("resolveUpload").handler { ctx -> 
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleResolveFileUpload(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling resolveUpload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling resolveUpload", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         routerBuilder.operation("convertUpload").handler { ctx -> 
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleConvertFileUpload(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling convertUpload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling convertUpload", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         routerBuilder.operation("queryUpload").handler { ctx -> 
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleQueryFileUpload(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling queryUpload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling queryUpload", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         
         // Handle regular operations with suspend functions
         routerBuilder.operation("validate").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleValidateRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling validate", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling validate", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         routerBuilder.operation("resolve").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleResolveRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling resolve", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling resolve", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         routerBuilder.operation("convert").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleConvertRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling convert", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling convert", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         routerBuilder.operation("query").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleQueryRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling query", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling query", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
 
         // Handle package operations
@@ -204,96 +220,112 @@ class OscalVerticle : CoroutineVerticle() {
         
         // Validate routes
         router.get("/validate").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleValidateRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling validate", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling validate", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         router.post("/validate")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                try {
-                    launch(vertx.dispatcher()) {
+                ctx.executeBlocking(Callable {
+                    try {
                         requestHandler.handleValidateFileUpload(ctx)
+                        null
+                    } catch (e: Exception) {
+                        logger.error("Error handling validate upload", e)
+                        responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                        null
                     }
-                } catch (e: Exception) {
-                    logger.error("Error handling validate upload", e)
-                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-                }
+                })
             }
             
         // Convert routes
         router.get("/convert").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleConvertRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling convert", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling convert", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         router.post("/convert")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                try {
-                    launch(vertx.dispatcher()) {
+                ctx.executeBlocking(Callable {
+                    try {
                         requestHandler.handleConvertFileUpload(ctx)
+                        null
+                    } catch (e: Exception) {
+                        logger.error("Error handling convert upload", e)
+                        responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                        null
                     }
-                } catch (e: Exception) {
-                    logger.error("Error handling convert upload", e)
-                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-                }
+                })
             }
             
         // Resolve profile routes
         router.get("/resolve").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleResolveRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling resolve", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling resolve", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         router.get("/resolve-profile").handler { ctx ->
-            try {
-                launch(vertx.dispatcher()) {
+            ctx.executeBlocking(Callable {
+                try {
                     requestHandler.handleResolveRequest(ctx)
+                    null
+                } catch (e: Exception) {
+                    logger.error("Error handling resolve-profile", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                    null
                 }
-            } catch (e: Exception) {
-                logger.error("Error handling resolve-profile", e)
-                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-            }
+            })
         }
         router.post("/resolve")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                try {
-                    launch(vertx.dispatcher()) {
+                ctx.executeBlocking(Callable {
+                    try {
                         requestHandler.handleResolveFileUpload(ctx)
+                        null
+                    } catch (e: Exception) {
+                        logger.error("Error handling resolve upload", e)
+                        responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                        null
                     }
-                } catch (e: Exception) {
-                    logger.error("Error handling resolve upload", e)
-                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-                }
+                })
             }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                try {
-                    launch(vertx.dispatcher()) {
+                ctx.executeBlocking(Callable {
+                    try {
                         requestHandler.handleResolveFileUpload(ctx)
+                        null
+                    } catch (e: Exception) {
+                        logger.error("Error handling resolve-profile upload", e)
+                        responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                        null
                     }
-                } catch (e: Exception) {
-                    logger.error("Error handling resolve-profile upload", e)
-                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-                }
+                })
             }
 
         // Add static file handler last
