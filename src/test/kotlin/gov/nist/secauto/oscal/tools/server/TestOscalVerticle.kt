@@ -261,7 +261,6 @@ class TestOscalVerticle {
 
             val fileUri = tempFile.toUri().toString()
             logger.info("Resolving HIGH baseline profile at: $fileUri")
-            logger.info("Catalog file at: $renamedCatalogFile")
 
             webClient.get("/resolve")
                 .addQueryParam("document", fileUri)
