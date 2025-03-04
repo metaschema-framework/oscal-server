@@ -6,7 +6,7 @@ OSCAL_VERSION ?= main
 
 # Default target
 .PHONY: all
-all: init-submodules clean-deps build-metaschema build-liboscal clean build-client compile package
+all: init-submodules clean-deps build-metaschema build-liboscal build-client compile package
 
 # Clean specific dependencies from Maven repository
 .PHONY: clean-deps
@@ -28,8 +28,8 @@ init-submodules:
 .PHONY: build-metaschema
 build-metaschema:
 	@echo "Building and installing metaschema-java..."
-	cd lib/metaschema-java && \
-	mvn clean install -DskipTests
+	cd lib/metaschema-java/ && \
+	mvn -B -e -Prelease -Psnapshots install
 
 # Build and install liboscal-java (depends on metaschema-java)
 .PHONY: build-liboscal
@@ -43,7 +43,7 @@ build-liboscal:
 	git fetch && \
 	git checkout $(OSCAL_VERSION) && \
 	cd .. && \
-	mvn clean install -DskipTests
+	mvn -B -e -Prelease -Psnapshots install
 
 # Clean the main project
 .PHONY: clean
@@ -56,6 +56,8 @@ clean:
 build-client:
 	@echo "Building the client..."
 	cd client && npm ci && npm run build && cd ..
+	@echo "Copying client build to webroot..."
+	cp -r client/public/* src/main/resources/webroot
 
 # Compile the main project with the correct versions
 .PHONY: compile
