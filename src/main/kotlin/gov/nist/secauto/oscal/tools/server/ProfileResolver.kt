@@ -42,7 +42,7 @@ class ProfileResolverService {
                     
                     // Load and validate profile
                     logger.debug("Loading and validating profile...")
-                    val document = inputPath.toUri().toURL().openStream().use { inputStream ->
+                    var document = inputPath.toUri().toURL().openStream().use { inputStream ->
                         val formatResult = loader.detectFormat(inputStream, inputPath.toUri())
                         val sourceFormat = formatResult.getFormat()
                         logger.info("Detected source format: $sourceFormat")
@@ -58,6 +58,11 @@ class ProfileResolverService {
                         throw IllegalArgumentException(msg)
                     }
                     logger.info("Profile loaded successfully")
+                    
+                    // Process the profile imports to handle special cases
+                    val importFilter = ProfileImportFilter()
+                    document = importFilter.processProfile(document, inputPath)
+                    logger.info("Profile imports processed")
                     
                     // Create resolver and resolve profile
                     logger.debug("Creating profile resolver...")
