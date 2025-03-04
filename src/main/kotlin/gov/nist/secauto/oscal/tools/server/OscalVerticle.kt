@@ -92,102 +92,86 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Configure upload operations with direct body content
         routerBuilder.operation("validateUpload").handler { ctx -> 
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleValidateFileUpload(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleValidateFileUpload(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling validateUpload", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         routerBuilder.operation("resolveUpload").handler { ctx -> 
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleResolveFileUpload(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleResolveFileUpload(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling resolveUpload", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         routerBuilder.operation("convertUpload").handler { ctx -> 
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleConvertFileUpload(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleConvertFileUpload(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling convertUpload", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         routerBuilder.operation("queryUpload").handler { ctx -> 
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleQueryFileUpload(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleQueryFileUpload(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling queryUpload", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         
         // Handle regular operations with suspend functions
         routerBuilder.operation("validate").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleValidateRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleValidateRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling validate", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         routerBuilder.operation("resolve").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleResolveRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleResolveRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling resolve", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         routerBuilder.operation("convert").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleConvertRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleConvertRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling convert", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         routerBuilder.operation("query").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleQueryRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleQueryRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling query", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
 
         // Handle package operations
@@ -220,112 +204,96 @@ class OscalVerticle : CoroutineVerticle() {
         
         // Validate routes
         router.get("/validate").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleValidateRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleValidateRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling validate", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         router.post("/validate")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                vertx.executeBlocking<Void>({ promise ->
-                    try {
-                        launch(vertx.dispatcher()) {
-                            requestHandler.handleValidateFileUpload(ctx)
-                        }
-                        promise.complete()
-                    } catch (e: Exception) {
-                        promise.fail(e)
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleValidateFileUpload(ctx)
                     }
-                }, false, null)
+                } catch (e: Exception) {
+                    logger.error("Error handling validate upload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                }
             }
             
         // Convert routes
         router.get("/convert").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleConvertRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleConvertRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling convert", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         router.post("/convert")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                vertx.executeBlocking<Void>({ promise ->
-                    try {
-                        launch(vertx.dispatcher()) {
-                            requestHandler.handleConvertFileUpload(ctx)
-                        }
-                        promise.complete()
-                    } catch (e: Exception) {
-                        promise.fail(e)
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleConvertFileUpload(ctx)
                     }
-                }, false, null)
+                } catch (e: Exception) {
+                    logger.error("Error handling convert upload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                }
             }
             
         // Resolve profile routes
         router.get("/resolve").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleResolveRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleResolveRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling resolve", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         router.get("/resolve-profile").handler { ctx ->
-            vertx.executeBlocking<Void>({ promise ->
-                try {
-                    launch(vertx.dispatcher()) {
-                        requestHandler.handleResolveRequest(ctx)
-                    }
-                    promise.complete()
-                } catch (e: Exception) {
-                    promise.fail(e)
+            try {
+                launch(vertx.dispatcher()) {
+                    requestHandler.handleResolveRequest(ctx)
                 }
-            }, false, null)
+            } catch (e: Exception) {
+                logger.error("Error handling resolve-profile", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+            }
         }
         router.post("/resolve")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                vertx.executeBlocking<Void>({ promise ->
-                    try {
-                        launch(vertx.dispatcher()) {
-                            requestHandler.handleResolveFileUpload(ctx)
-                        }
-                        promise.complete()
-                    } catch (e: Exception) {
-                        promise.fail(e)
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleResolveFileUpload(ctx)
                     }
-                }, false, null)
+                } catch (e: Exception) {
+                    logger.error("Error handling resolve upload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                }
             }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
             .handler { ctx ->
-                vertx.executeBlocking<Void>({ promise ->
-                    try {
-                        launch(vertx.dispatcher()) {
-                            requestHandler.handleResolveFileUpload(ctx)
-                        }
-                        promise.complete()
-                    } catch (e: Exception) {
-                        promise.fail(e)
+                try {
+                    launch(vertx.dispatcher()) {
+                        requestHandler.handleResolveFileUpload(ctx)
                     }
-                }, false, null)
+                } catch (e: Exception) {
+                    logger.error("Error handling resolve-profile upload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
+                }
             }
 
         // Add static file handler last
