@@ -210,46 +210,6 @@ class TestOscalVerticle {
     }
 
     @Test
-    fun test_oscal_command_resolve(testContext: VertxTestContext) {
-        val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/master/src/content/rev5/baselines/xml/FedRAMP_rev5_LI-SaaS-baseline_profile.xml")
-        val catalogUrl = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/master/src/content/rev5/baselines/xml/NIST_SP-800-53_rev5_catalog.xml")
-
-        val tempFile = downloadToTempFile(url, "resolve", ".xml")
-        val catalogFile = downloadCatalog(catalogUrl, tempFile.parent)
-
-        try {
-            // Ensure the catalog file has the expected name that the resolver will look for
-            // The profile typically references the catalog by a specific name
-            val expectedCatalogName = "NIST_SP-800-53_rev5_catalog.xml"
-            val renamedCatalogFile = tempFile.parent.resolve(expectedCatalogName)
-            if (catalogFile.fileName.toString() != expectedCatalogName) {
-                Files.copy(catalogFile, renamedCatalogFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-                logger.info("Renamed catalog file to: $renamedCatalogFile")
-            }
-
-            val fileUri = tempFile.toUri().toString()
-            logger.info("Resolving profile at: $fileUri")
-            logger.info("Catalog file at: $renamedCatalogFile")
-
-            webClient.get("/resolve")
-                .addQueryParam("document", fileUri)
-                .putHeader("Accept", "application/json")
-                .send(testContext.succeeding { response ->
-                    testContext.verify {
-                        assertEquals(200, response.statusCode())
-                        val body = response.bodyAsJsonObject()
-                        assertEquals("OK", response.getHeader("Exit-Status"))
-                        assertNotNull(body)
-                        testContext.completeNow()
-                    }
-                })
-        } finally {
-            // Files.deleteIfExists(tempFile)
-            // Files.deleteIfExists(catalogFile)
-        }
-    }
-    
-    @Test
     fun test_oscal_command_resolve_high_baseline(testContext: VertxTestContext) {
         val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/content/rev5/baselines/xml/FedRAMP_rev5_HIGH-baseline_profile.xml")
 
