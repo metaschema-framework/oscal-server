@@ -29,7 +29,7 @@ init-submodules:
 build-metaschema:
 	@echo "Building and installing metaschema-java..."
 	cd lib/metaschema-java/ && \
-	mvn -B -e -Prelease -Psnapshots install
+	mvn -B -e -Prelease -Psnapshots install -Dsk -DskipTests
 
 # Build and install liboscal-java (depends on metaschema-java)
 .PHONY: build-liboscal
@@ -43,7 +43,7 @@ build-liboscal:
 	git fetch && \
 	git checkout $(OSCAL_VERSION) && \
 	cd .. && \
-	mvn -B -e -Prelease -Psnapshots install
+	mvn -B -e -Prelease -Psnapshots install -DskipTests
 
 # Clean the main project
 .PHONY: clean
