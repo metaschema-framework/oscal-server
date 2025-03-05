@@ -3,23 +3,26 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
- package gov.nist.secauto.oscal.tools.server
+package gov.nist.secauto.oscal.tools.server
 
- import gov.nist.secauto.metaschema.cli.processor.ExitCode
- import gov.nist.secauto.metaschema.cli.processor.ExitStatus
- import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
- import gov.nist.secauto.metaschema.databind.io.Format
- import gov.nist.secauto.metaschema.databind.io.IBoundLoader
- import gov.nist.secauto.metaschema.core.model.IBoundObject
- import gov.nist.secauto.oscal.lib.OscalBindingContext
- import gov.nist.secauto.oscal.lib.model.Profile
- import gov.nist.secauto.oscal.lib.profile.resolver.ProfileResolver
- import kotlinx.coroutines.Dispatchers
- import kotlinx.coroutines.withContext
- import org.apache.logging.log4j.LogManager
- import org.apache.logging.log4j.Logger
- import java.nio.file.Files
- import java.nio.file.Path
+import gov.nist.secauto.metaschema.core.metapath.item.node.IDocumentNodeItem
+import gov.nist.secauto.metaschema.core.metapath.item.node.INodeItem
+import gov.nist.secauto.metaschema.cli.processor.ExitCode
+import gov.nist.secauto.metaschema.cli.processor.ExitStatus
+import gov.nist.secauto.metaschema.cli.processor.MessageExitStatus
+import gov.nist.secauto.metaschema.databind.io.Format
+import gov.nist.secauto.metaschema.databind.io.IBoundLoader
+import gov.nist.secauto.metaschema.core.model.IBoundObject
+import gov.nist.secauto.oscal.lib.OscalBindingContext
+import gov.nist.secauto.oscal.lib.model.Profile
+import gov.nist.secauto.oscal.lib.model.Catalog
+import gov.nist.secauto.oscal.lib.profile.resolver.ProfileResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import java.nio.file.Files
+import java.nio.file.Path
  
  class ProfileResolverService {
      private val logger: Logger = LogManager.getLogger(ProfileResolverService::class.java)
@@ -78,18 +81,13 @@
                          val resolvedDocument = resolver.resolve(inputPath)
                          logger.info("Profile resolved successfully")
                          
-                         // Get the catalog from the document
-                         val catalogRoot = resolvedDocument.getModelItemsByName("catalog").firstOrNull()
-                         if (catalogRoot == null) {
-                             throw IllegalStateException("Resolved document does not contain a catalog")
-                         }
-                         
-                         val resolvedCatalog = catalogRoot.value as IBoundObject
+                         // Convert the resolved document to a Catalog
+                         val resolvedCatalog = INodeItem.toValue(resolvedDocument) as Catalog
                          
                          // Serialize resolved profile to the output
                          logger.info("Serializing resolved profile...")
                          Files.newOutputStream(outputPath).use { out ->
-                             context.newSerializer(outputFormat, resolvedCatalog.javaClass).serialize(resolvedCatalog, out)
+                             context.newSerializer(outputFormat, Catalog::class.java).serialize(resolvedCatalog, out)
                          }
                          logger.info("Profile resolution completed successfully")
                          
