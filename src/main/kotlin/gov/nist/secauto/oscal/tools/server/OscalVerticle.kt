@@ -93,7 +93,7 @@ class OscalVerticle : CoroutineVerticle() {
         }
 
         // Configure upload operations with direct body content
-        routerBuilder.operation("validateUpload").coHandler { ctx -> 
+        routerBuilder.operation("validateUpload").handler { ctx ->
             try {
                 requestHandler.handleValidateFileUpload(ctx)
             } catch (e: Exception) {
@@ -101,7 +101,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        routerBuilder.operation("resolveUpload").coHandler { ctx -> 
+        routerBuilder.operation("resolveUpload").handler { ctx ->
             try {
                 requestHandler.handleResolveFileUpload(ctx)
             } catch (e: Exception) {
@@ -109,7 +109,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        routerBuilder.operation("convertUpload").coHandler { ctx -> 
+        routerBuilder.operation("convertUpload").handler { ctx ->
             try {
                 requestHandler.handleConvertFileUpload(ctx)
             } catch (e: Exception) {
@@ -117,7 +117,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        routerBuilder.operation("queryUpload").coHandler { ctx -> 
+        routerBuilder.operation("queryUpload").handler { ctx ->
             try {
                 requestHandler.handleQueryFileUpload(ctx)
             } catch (e: Exception) {
@@ -127,7 +127,7 @@ class OscalVerticle : CoroutineVerticle() {
         }
         
         // Handle regular operations with suspend functions
-        routerBuilder.operation("validate").coHandler { ctx ->
+        routerBuilder.operation("validate").handler { ctx ->
             try {
                 requestHandler.handleValidateRequest(ctx)
             } catch (e: Exception) {
@@ -135,7 +135,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        routerBuilder.operation("resolve").coHandler { ctx ->
+        routerBuilder.operation("resolve").handler { ctx ->
             try {
                 requestHandler.handleResolveRequest(ctx)
             } catch (e: Exception) {
@@ -143,7 +143,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        routerBuilder.operation("convert").coHandler { ctx ->
+        routerBuilder.operation("convert").handler { ctx ->
             try {
                 requestHandler.handleConvertRequest(ctx)
             } catch (e: Exception) {
@@ -151,7 +151,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        routerBuilder.operation("query").coHandler { ctx ->
+        routerBuilder.operation("query").handler { ctx ->
             try {
                 requestHandler.handleQueryRequest(ctx)
             } catch (e: Exception) {

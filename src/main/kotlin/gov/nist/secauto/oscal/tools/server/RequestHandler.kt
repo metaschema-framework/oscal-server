@@ -42,7 +42,7 @@ class RequestHandler(
             .end(response.encode())
     }
 
-    suspend fun handleQueryRequest(ctx: RoutingContext) {
+    fun handleQueryRequest(ctx: RoutingContext) {
         try {
             logger.info("Handling Query request")
             val encodedContent = ctx.queryParam("document").firstOrNull()
@@ -109,7 +109,7 @@ class RequestHandler(
         }
     }
 
-    suspend fun handleResolveRequest(ctx: RoutingContext) {
+    fun handleResolveRequest(ctx: RoutingContext) {
         try {
             val encodedContent = ctx.queryParam("document").firstOrNull()
             if (encodedContent != null) {
@@ -139,7 +139,7 @@ class RequestHandler(
         }
     }
 
-    suspend fun handleConvertRequest(ctx: RoutingContext) {
+    fun handleConvertRequest(ctx: RoutingContext) {
         try {
             val encodedContent = ctx.queryParam("document").firstOrNull()
             if (encodedContent != null) {
@@ -178,13 +178,13 @@ class RequestHandler(
         }
     }
 
-    private suspend fun storeUploadedFile(body: String, prefix: String, contentType: String): Path {
+    private fun storeUploadedFile(body: String, prefix: String, contentType: String): Path {
         val tempFile = of(oscalDir.toString(), "$prefix-${System.nanoTime()}${getExtensionFromContentType(contentType)}")
         Files.writeString(tempFile, body)
         return tempFile
     }
 
-    suspend fun handleValidateFileUpload(ctx: RoutingContext) {
+    fun handleValidateFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling validate content request")
@@ -213,7 +213,7 @@ class RequestHandler(
         }
     }
 
-    suspend fun handleQueryFileUpload(ctx: RoutingContext) {
+    fun handleQueryFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling query content request")
@@ -242,7 +242,7 @@ class RequestHandler(
         }
     }
 
-    suspend fun handleResolveFileUpload(ctx: RoutingContext) {
+    fun handleResolveFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling resolve content request")
@@ -271,7 +271,7 @@ class RequestHandler(
         }
     }
 
-    suspend fun handleConvertFileUpload(ctx: RoutingContext) {
+    fun handleConvertFileUpload(ctx: RoutingContext) {
         launch {
             try {
                 logger.info("Handling convert content request")

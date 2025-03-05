@@ -22,7 +22,7 @@ class CommandExecutor(private val oscalDir: Path) {
     private val profileResolver = ProfileResolverService()
     private val metapathEvaluator = MetapathEvaluator()
 
-    suspend fun validateDocument(
+    fun validateDocument(
         inputPath: Path,
         flags: Set<String> = emptySet(),
         constraints: List<Path> = emptyList(),
@@ -36,7 +36,7 @@ class CommandExecutor(private val oscalDir: Path) {
         }
     }
 
-    suspend fun convertDocument(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
+    fun convertDocument(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
         return try {
             documentConverter.convertDocument(inputPath, outputPath, format)
@@ -45,7 +45,7 @@ class CommandExecutor(private val oscalDir: Path) {
         }
     }
 
-    suspend fun resolveProfile(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
+    fun resolveProfile(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
         return try {
             profileResolver.resolveProfile(inputPath, outputPath, format)
@@ -54,7 +54,7 @@ class CommandExecutor(private val oscalDir: Path) {
         }
     }
 
-    suspend fun evaluateMetapath(inputPath: Path, expression: String, module: String): Pair<ExitStatus, String> {
+    fun evaluateMetapath(inputPath: Path, expression: String, module: String): Pair<ExitStatus, String> {
         activeWorkers.incrementAndGet()
         return try {
             metapathEvaluator.evaluateMetapath(inputPath, expression, module, oscalDir)

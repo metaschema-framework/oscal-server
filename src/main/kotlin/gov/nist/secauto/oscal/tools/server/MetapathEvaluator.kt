@@ -28,7 +28,7 @@ class MetapathEvaluator {
     private val logger: Logger = LogManager.getLogger(MetapathEvaluator::class.java)
     private val context = OscalBindingContext.instance()
 
-    suspend fun evaluateMetapath(
+    fun evaluateMetapath(
         inputPath: Path,
         expression: String,
         module: String,
