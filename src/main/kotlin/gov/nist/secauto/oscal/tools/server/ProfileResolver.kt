@@ -75,13 +75,21 @@
                      
                      logger.info("Resolving profile...")
                      try {
-                         val resolvedProfile = resolver.resolve(inputPath) as IBoundObject
+                         val resolvedDocument = resolver.resolve(inputPath)
                          logger.info("Profile resolved successfully")
+                         
+                         // Get the catalog from the document
+                         val catalogRoot = resolvedDocument.getModelItemsByName("catalog").firstOrNull()
+                         if (catalogRoot == null) {
+                             throw IllegalStateException("Resolved document does not contain a catalog")
+                         }
+                         
+                         val resolvedCatalog = catalogRoot.value as IBoundObject
                          
                          // Serialize resolved profile to the output
                          logger.info("Serializing resolved profile...")
                          Files.newOutputStream(outputPath).use { out ->
-                             context.newSerializer(outputFormat, resolvedProfile.javaClass).serialize(resolvedProfile, out)
+                             context.newSerializer(outputFormat, resolvedCatalog.javaClass).serialize(resolvedCatalog, out)
                          }
                          logger.info("Profile resolution completed successfully")
                          
