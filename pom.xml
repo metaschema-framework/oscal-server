@@ -466,21 +466,32 @@
     </plugins>
   </build>
   <repositories>
-  <!-- Point to your local .m2 repository -->
-  <repository>
-    <id>local-m2-repo</id>
-    <url>file:///${user.home}/.m2/repository</url>
-    <releases>
-      <enabled>true</enabled>
-      <updatePolicy>never</updatePolicy>
-    </releases>
-    <snapshots>
-      <enabled>true</enabled>
-      <updatePolicy>never</updatePolicy>
-    </snapshots>
-  </repository>
+    <!-- Point to your local .m2 repository -->
+    <repository>
+      <id>local-m2-repo</id>
+      <url>file:///${user.home}/.m2/repository</url>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </snapshots>
+    </repository>
+    <!-- Repository for metaschema dependencies -->
+    <repository>
+      <id>repo-snapshot</id>
+      <name>Metaschema Framework Repository</name>
+      <url>https://raw.githubusercontent.com/metaschema-framework/maven2/refs/heads/main</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+      </snapshots>
+    </repository>
   </repositories>
-
-
 
 </project>
