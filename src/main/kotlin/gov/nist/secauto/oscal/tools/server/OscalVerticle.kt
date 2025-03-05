@@ -17,14 +17,12 @@ import io.vertx.kotlin.coroutines.CoroutineVerticle
 import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.kotlin.coroutines.dispatcher
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.awaitBlocking
-import java.util.concurrent.Callable
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.LogManager
 import java.nio.file.Path
 import java.nio.file.Paths
-import io.vertx.core.Promise
 import io.vertx.core.DeploymentOptions
+import io.vertx.kotlin.coroutines.awaitBlocking
 
 class OscalVerticle : CoroutineVerticle() {
     private val logger: Logger = LogManager.getLogger(OscalVerticle::class.java)
@@ -125,7 +123,7 @@ class OscalVerticle : CoroutineVerticle() {
                 responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
-        
+
         // Handle regular operations with suspend functions
         routerBuilder.operation("validate").handler { ctx ->
             try {
@@ -173,7 +171,7 @@ class OscalVerticle : CoroutineVerticle() {
         routerBuilder.operation("getModuleFile").handler { ctx -> moduleHandler.handleGetFile(ctx) }
         routerBuilder.operation("updateModuleFile").handler { ctx -> moduleHandler.handleUpdateFile(ctx) }
         routerBuilder.operation("deleteModuleFile").handler { ctx -> moduleHandler.handleDeleteFile(ctx) }
-        
+
         // Handle health check
         routerBuilder.operation("healthCheck").handler { ctx -> requestHandler.handleHealthCheck(ctx) }
 
@@ -187,39 +185,30 @@ class OscalVerticle : CoroutineVerticle() {
 
         // Add direct route handlers for legacy support
         router.get("/health").handler { ctx -> requestHandler.handleHealthCheck(ctx) }
-        
+
         // Validate routes
-        router.get("/validate").coHandler { ctx ->
-            withContext(vertx.dispatcher()) {
-                awaitBlocking {
-                    try {
-                        requestHandler.handleValidateRequest(ctx)
-                    } catch (e: Exception) {
-                        logger.error("Error handling validate", e)
-                        responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-                    }
-                }
+        router.get("/validate").blockingHandler { ctx ->
+            try {
+                requestHandler.handleValidateRequest(ctx)
+            } catch (e: Exception) {
+                logger.error("Error handling validate", e)
+                responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
             }
         }
         router.post("/validate")
             .handler(directRouteBodyHandler)
-            .coHandler { ctx ->
-                withContext(vertx.dispatcher()) {
-                    awaitBlocking {
-                        try {
-                            requestHandler.handleValidateFileUpload(ctx)
-                        } catch (e: Exception) {
-                            logger.error("Error handling validate upload", e)
-                            responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
-                        }
-                    }
+            .blockingHandler { ctx ->
+                try {
+                    requestHandler.handleValidateFileUpload(ctx)
+                } catch (e: Exception) {
+                    logger.error("Error handling validate upload", e)
+                    responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                 }
             }
-            
+
+
         // Convert routes
-        router.get("/convert").coHandler { ctx ->
-            withContext(vertx.dispatcher()) {
-                awaitBlocking {
+        router.get("/convert").blockingHandler{ctx->
                     try {
                         requestHandler.handleConvertRequest(ctx)
                     } catch (e: Exception) {
@@ -227,67 +216,49 @@ class OscalVerticle : CoroutineVerticle() {
                         responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                     }
                 }
-            }
-        }
+
+
         router.post("/convert")
             .handler(directRouteBodyHandler)
-            .coHandler { ctx ->
-                withContext(vertx.dispatcher()) {
-                    awaitBlocking {
+            .blockingHandler { ctx ->
                         try {
                             requestHandler.handleConvertFileUpload(ctx)
                         } catch (e: Exception) {
                             logger.error("Error handling convert upload", e)
                             responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                         }
-                    }
-                }
             }
             
         // Resolve profile routes
-        router.get("/resolve").coHandler { ctx ->
-            withContext(vertx.dispatcher()) {
-                awaitBlocking {
+        router.get("/resolve").blockingHandler { ctx ->
                     try {
                         requestHandler.handleResolveRequest(ctx)
                     } catch (e: Exception) {
                         logger.error("Error handling resolve", e)
                         responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                     }
-                }
-            }
         }
-        router.get("/resolve-profile").coHandler { ctx ->
-            withContext(vertx.dispatcher()) {
-                awaitBlocking {
+        router.get("/resolve-profile").blockingHandler { ctx->
                     try {
                         requestHandler.handleResolveRequest(ctx)
                     } catch (e: Exception) {
                         logger.error("Error handling resolve-profile", e)
                         responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                     }
-                }
-            }
         }
         router.post("/resolve")
             .handler(directRouteBodyHandler)
-            .coHandler { ctx ->
-                withContext(vertx.dispatcher()) {
-                    awaitBlocking {
+            .blockingHandler { ctx->
                         try {
                             requestHandler.handleResolveFileUpload(ctx)
                         } catch (e: Exception) {
                             logger.error("Error handling resolve upload", e)
                             responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                         }
-                    }
-                }
             }
         router.post("/resolve-profile")
             .handler(directRouteBodyHandler)
-            .coHandler { ctx ->
-                withContext(vertx.dispatcher()) {
-                    awaitBlocking {
+.blockingHandler { ctx->
                         try {
                             requestHandler.handleResolveFileUpload(ctx)
                         } catch (e: Exception) {
@@ -295,8 +266,6 @@ class OscalVerticle : CoroutineVerticle() {
                             responseHandler.sendErrorResponse(ctx, 500, "Internal server error")
                         }
                     }
-                }
-            }
 
         // Add static file handler last
         router.route("/*").handler(StaticHandler.create("webroot"))

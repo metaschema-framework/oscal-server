@@ -85,7 +85,7 @@ import java.lang.Exception
          }
      }
  
-     suspend fun validateDocument(
+     fun validateDocument(
          inputPath: Path,
          flags: Set<String> = emptySet(),
          constraints: List<Path> = emptyList(),

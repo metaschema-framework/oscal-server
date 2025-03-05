@@ -23,7 +23,7 @@ class DocumentConverter {
     private val logger: Logger = LogManager.getLogger(DocumentConverter::class.java)
     private val context = OscalBindingContext.instance()
 
-    suspend fun convertDocument(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
+    fun convertDocument(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
         logger.info("Converting document from $inputPath to $outputPath with format $format")
         return try {
                 val exitStatus = try {

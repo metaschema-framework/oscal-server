@@ -65,7 +65,7 @@ class RequestHandler(
         }
     }
 
-    suspend fun handleValidateRequest(ctx: RoutingContext) {
+    fun handleValidateRequest(ctx: RoutingContext) {
         try {
             logger.info("Handling Validate request")
             val encodedContent = ctx.queryParam("document").firstOrNull()

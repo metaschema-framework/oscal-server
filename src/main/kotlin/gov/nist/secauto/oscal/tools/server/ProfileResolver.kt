@@ -25,7 +25,7 @@
      private val logger: Logger = LogManager.getLogger(ProfileResolverService::class.java)
      private val context = OscalBindingContext.instance()
  
-     suspend fun resolveProfile(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
+     fun resolveProfile(inputPath: Path, outputPath: Path, format: String): Pair<ExitStatus, String> {
          logger.info("Resolving profile from $inputPath to $outputPath with format $format")
          return try {
                  val exitStatus = try {
