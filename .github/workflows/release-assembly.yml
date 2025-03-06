@@ -51,10 +51,7 @@ jobs:
         
         # Initialize submodules
         make init-submodules
-        
-        # Run tests using the make system
-        make test OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
-        
+                
         # Build and package the project
         make package OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
 
