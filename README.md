@@ -1,30 +1,55 @@
-Here's the content converted to Markdown format:
-
 # Server
 
-![vert.x](https://img.shields.io/badge/vert.x-4.5.10-purple.svg)
-
-This application was generated using [http://start.vertx.io](http://start.vertx.io)
+Oscal CLI server (to avoid JVM warmup)
 
 ## Building
 
-To launch your tests:
+The project uses a Makefile to manage the build process. Here are the common commands:
+
+### Initialize Submodules
 
 ```
-mvn clean test
+make init-submodules
 ```
 
-To package your application:
+### Run Tests
 
 ```
-mvn clean package
+make test
 ```
 
-To run your application:
+### Compile the Project
 
 ```
-mvn clean compile exec:java
+make compile
 ```
+
+### Package the Application
+
+```
+make package
+```
+
+### Specifying OSCAL Version
+
+You can specify a custom OSCAL Git repository and version (branch, tag, or commit hash) when building:
+
+```
+make package OSCAL_REPO=https://github.com/usnistgov/OSCAL.git OSCAL_VERSION=v1.1.0
+```
+
+This allows you to build against a specific version of OSCAL, which can be useful for testing or when you need to use features from a specific OSCAL release.
+
+### Run the Application
+
+```
+make compile
+mvn exec:java
+```
+
+### Other Available Commands
+
+Run `make help` to see all available commands.
 
 ## Help
 

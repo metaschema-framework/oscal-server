@@ -1,0 +1,312 @@
+system-security-plan:
+  uuid: 8c1ee2a6-bd14-4f77-b2f7-3d2bc0aaa55e
+  metadata:
+    title: "Oscal Server Software Development System Security Plan"
+    last-modified: "2024-10-24T00:00:00Z"
+    version: "1.0"
+    oscal-version: "1.0.4"
+    published: "2024-10-24T00:00:00Z"
+    roles:
+      - id: authorizing-official
+        title: Authorizing Official
+      - id: system-owner
+        title: System Owner
+      - id: information-security-officer
+        title: Information System Security Officer
+      - id: developer
+        title: Software Developer
+      - id: security-engineer
+        title: Security Engineer
+      - id: prepared-by
+        title: Document Preparer
+      - id: prepared-for
+        title: Document Recipient
+    
+    parties:
+      - uuid: 11111111-0000-4000-9000-100000000001
+        type: organization
+        name: "Metaschema Framework Organization"
+        short-name: "MFO"
+      - uuid: 11111111-0000-4000-9000-100000000002
+        type: person
+        name: "David Waltermire"
+        props:
+          - name: job-title
+            value: Software Architect
+      - uuid: 22222222-0000-4000-9000-100000000002
+        type: person
+        name: "Paul Wand"
+        props:
+          - name: job-title
+            value: Senior Software Architect
+      - uuid: 88888888-0000-4000-9000-100000000008
+        type: person
+        name: "AJ Stein"
+        props:
+          - name: job-title
+            value: Senior Security Architect
+      - uuid: 99999999-0000-4000-9000-100000000009
+        type: organization
+        name: "FedRAMP PMO"
+        links:
+          - href: https://fedramp.gov
+            rel: homepage
+    responsible-parties:
+      - role-id: system-owner
+        party-uuids:
+          - 11111111-0000-4000-9000-100000000002
+      - role-id: information-security-officer
+        party-uuids:
+          - 22222222-0000-4000-9000-100000000002
+      - role-id: prepared-by
+        party-uuids:
+          - 88888888-0000-4000-9000-100000000008
+
+    props:
+      - name: marking
+        value: "SENSITIVE BUT UNCLASSIFIED"
+
+  import-profile:
+    href: "profile.oscal.yaml"
+
+  system-characteristics:
+    system-ids:
+      - id: "ESC-DEV-001"
+        identifier-type: https://fedramp.gov
+    system-name: "Enterprise Software Development Environment"
+    system-name-short: "ESDE"
+    description: >-
+      Primary software development environment for Example Software Company,
+      including development, testing, and build infrastructure.
+    security-sensitivity-level: fips-199-moderate
+    system-information:
+      information-types:
+        - title: "Software Development Information"
+          uuid: 370026f8-582b-4c02-9331-a5c84afdbfd8
+          description: "Source code, build configurations, and development artifacts"
+          categorization:
+            system: https://doi.org/10.6028/NIST.SP.800-60v2r1
+            information-type-id: C.3.5.1
+          confidentiality-impact:
+            base: fips-199-low
+            selected: fips-199-low
+          integrity-impact:
+            base: fips-199-moderate
+            selected: fips-199-low
+            adjustment-justification: >-
+              This library is provided as a public domain application built with free, open-source, and public domain libraries. Vendors using this application must review and confirm the integrity of the codebase and its changes over time and use the Merkle-tree data structure with integrity checking mechanisms as provided by the `git` utility, protocol, and GitHub code sharing service. Integrity checking is free and ubiqutous, and the impact of integrity violation to this code base is low, not moderate.
+          availability-impact:
+            base: fips-199-moderate
+            selected: fips-199-low
+    security-impact-level:
+      security-objective-confidentiality: moderate
+      security-objective-integrity: moderate
+      security-objective-availability: moderate
+
+    status:
+      state: operational
+
+    authorization-boundary:
+      description: "The authorization boundary encompasses all core development systems"
+      diagrams:
+        - description: "a simple diagram in mermaid"
+          links:
+            - href: "#11111111-2222-3333-4444-555555555555"
+
+    network-architecture:
+      description: "Network architecture showing system components and connections"
+      diagrams:  
+        - description: "a simple diagram in mermaid"
+          links:
+            - href: "#11111111-3333-3333-4444-555555555555"
+
+
+    data-flow:
+      description: "Data flow between system components"
+
+  system-implementation:
+    users:
+      - uuid: 33333333-0000-4000-9000-100000000003
+        title: "Development Team"
+        description: "Software developers and engineers"
+        role-ids:
+          - developer
+        authorized-privileges:
+          - title: "Code Repository Access"
+            functions-performed:
+              - "Read/Write source code"
+              - "Create pull requests"
+        props:
+          - name: type
+            value: "internal"
+      
+      - uuid: 44444444-0000-4000-9000-100000000004
+        title: "Security Team"
+        description: "Security engineers and analysts"
+        role-ids:
+          - security-engineer
+        authorized-privileges:
+          - title: "Security Scanning"
+            functions-performed:
+              - "Run security scans"
+              - "Review security findings"
+        props:
+          - name: type
+            value: "internal"
+
+    components:
+      - uuid: 55555555-0000-4000-9000-100000000005
+        type: "software"
+        title: "Source Control System"
+        description: "Git-based version control system"
+        status:
+          state: operational
+        responsible-roles:
+          - role-id: information-security-officer
+        links:
+          - href: "poam.oscal.yaml"
+            rel: poam-item
+            resource-fragment: "77777777-0000-4000-9000-100000000020"
+
+      - uuid: 66666666-0000-4000-9000-100000000006
+        type: "software"
+        title: "CI/CD Pipeline"
+        description: "Continuous Integration and Deployment System"
+        status:
+          state: operational
+        responsible-roles:
+          - role-id: information-security-officer
+        links:
+          - href: "poam.oscal.yaml"
+            rel: poam-item
+            resource-fragment: "77777777-0000-4000-9000-100000000026"
+  control-implementation:
+    implemented-requirements:
+    # Respond to Vulnerabilities (RV) Controls
+    - uuid: 77777777-0000-4000-9000-100000000011
+      control-id: rv1
+      by-components:
+        - component-uuid: 66666666-0000-4000-9000-100000000006
+          implementation-status:
+            state: planned
+          description: >-
+            Vulnerability scanning is automated in the CI/CD pipeline.
+            Security findings are tracked and remediated based on severity.
+            A bug bounty program is maintained for external security researchers.
+    - uuid: 77777777-0000-4000-9000-100000000001 
+      control-id: po1
+      props:
+        - ns: "https://fedramp.gov/ns/oscal"
+          name: "control-origination"
+          value: "service-provider-system"
+        - ns: "https://fedramp.gov/ns/oscal" 
+          name: "implementation-status"
+          value: "implemented"
+      statements:
+        - statement-id: "po-1_smt"
+          uuid: 77777777-0000-4000-9000-200000000001
+          by-components:
+            - component-uuid: 55555555-0000-4000-9000-100000000005
+              uuid: 77777777-0000-4000-9000-300000000001
+              description: >-
+                Security requirements for software development are documented and maintained
+                in the organization's security policy repository. Requirements are:
+                - Reviewed quarterly by the security team
+                - Updated based on emerging threats and compliance needs
+                - Stored in a version-controlled repository
+                - Accessible to all development teams
+              implementation-status:
+                state: implemented
+
+    - uuid: 77777777-0000-4000-9000-100000000002
+      control-id: po2
+      props:
+        - ns: "https://fedramp.gov/ns/oscal"
+          name: "control-origination" 
+          value: "service-provider-system"
+        - ns: "https://fedramp.gov/ns/oscal"
+          name: "implementation-status"
+          value: "implemented"
+      statements:
+        - statement-id: "po-2_smt.a"
+          uuid: 77777777-0000-4000-9000-200000000002
+          by-components:
+            - component-uuid: 55555555-0000-4000-9000-100000000005
+              uuid: 77777777-0000-4000-9000-300000000002
+              description: >-
+                Development team roles and responsibilities are clearly defined through:
+                - Comprehensive RACI matrix covering all SDLC phases
+                - Quarterly security training with role-specific modules 
+                - Tracked training completion in the learning management system
+              implementation-status:
+                state: implemented
+        
+        - statement-id: "po-2_smt.b"
+          uuid: 77777777-0000-4000-9000-200000000003
+          by-components:
+            - component-uuid: 55555555-0000-4000-9000-100000000005
+              uuid: 77777777-0000-4000-9000-300000000003
+              description: >-
+                Role-based security training is provided through:
+                - Initial onboarding training
+                - Quarterly refresher courses
+                - Role-specific security modules
+              implementation-status:
+                state: implemented
+
+    - uuid: 77777777-0000-4000-9000-100000000003
+      control-id: po3
+      props:
+        - ns: "https://fedramp.gov/ns/oscal"
+          name: "control-origination"
+          value: "service-provider-system"
+        - ns: "https://fedramp.gov/ns/oscal"
+          name: "implementation-status"
+          value: "implemented"
+      statements: 
+        - statement-id: "po-3_smt"
+          uuid: 77777777-0000-4000-9000-200000000004
+          by-components:
+            - component-uuid: 66666666-0000-4000-9000-100000000006
+              uuid: 77777777-0000-4000-9000-300000000004
+              description: >- 
+                CI/CD pipeline integrates multiple security tools including:
+                - Static Application Security Testing (SAST)
+                - Software Composition Analysis (SCA)
+                - Dynamic Application Security Testing (DAST)
+                - Container security scanning
+                All tools are configured to fail builds on critical findings.
+              implementation-status:
+                state: implemented
+  back-matter:
+    resources:
+    - uuid: 11111111-2222-3333-4444-555555555555
+      title: Boundary Diagram
+      description: The primary authorization boundary diagram.
+      props:
+        - name: type
+          value: image
+          class: authorization-boundary
+      rlinks:
+        - href: ./attachments/diagrams/authorization-boundary.png
+        - href: ./attachments/diagrams/authorization-boundary.mermaid
+    - uuid: 11111111-3333-3333-4444-555555555555
+      title: Network Diagram
+      description: The primary network boundary diagram.
+      props:
+        - name: type
+          value: image
+          class: network-diagram
+      rlinks:
+        - href: ./attachments/diagrams/network-diagram.svg
+        - href: ./attachments/diagrams/network-diagram.mermaid
+    - uuid: 66666666-0000-4000-8000-100000000006
+      title: "System POA&M"
+      description: "Plan of Action and Milestones for the System"
+      rlinks:
+        - href: "poam.oscal.yaml"
+      props:
+        - name: type
+          ns: "https://fedramp.gov/ns/oscal"
+          value: "plan"
+          class: "poam"
