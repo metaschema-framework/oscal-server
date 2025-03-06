@@ -155,14 +155,9 @@ import java.lang.Exception
                          val modelInputStream = modelResult.getDataStream()
                          val document = loader.load(boundClass, sourceFormat, modelInputStream, inputPath.toUri())
                          logger.info("Document loaded successfully as: ${document.javaClass.simpleName}")
-                         
-                         // Perform schema validation
-                         logger.debug("Performing schema validation...")
-                         // validationResult = bindingContext(inputPath.toUri(), sourceFormat, bindingContext)
-                         logger.info("Schema validation completed")
-                         
+                                                  
                          // Perform constraint validation if needed
-                         if (constraints.isNotEmpty()) {
+                         if ("disable-constraint" !in flags) {
                              logger.debug("Performing constraint validation...")
                              val constraintResult = bindingContext.validateWithConstraints(inputPath.toUri(), configuration)
                              validationResult = if (validationResult == null) {
