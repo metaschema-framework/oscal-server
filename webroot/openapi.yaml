@@ -1,0 +1,717 @@
+openapi: 3.0.0
+info:
+  title: OSCAL SERVER
+  version: 1.0.0
+  description: API for validating, resolving, and converting OSCAL documents
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        activeWorkers:
+          type: integer
+          description: The number of currently active workers
+    SarifResponse:
+      type: object
+      properties:
+        version:
+          type: string
+        runs:
+          type: array
+          items:
+            type: object
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    SarifResponse:
+      description: Successful SARIF response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SarifResponse'
+    OscalResponse:
+      description: Successful OSCAL response
+      content:
+        application/json:
+          schema:
+            type: string
+        text/xml:
+          schema:
+            type: string
+        text/yaml:
+          schema:
+            type: string
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+paths:
+  /api/health:
+    get:
+      operationId: healthCheck
+      summary: Check the health of the server
+      description: Returns the health status of the server and the number of active workers
+      responses:
+        '200':
+          description: Successful health check response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/validate:
+    get:
+      operationId: validate
+      summary: Validate remote OSCAL document
+      parameters:
+        - in: query
+          name: document
+          required: true
+          schema:
+            type: string
+          description: URI of an OSCAL document to validate
+          example: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
+        - in: query
+          name: constraint
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: URIs of metaschema extension modules to load
+          example: 
+            - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
+        - in: query
+          name: module
+          required: false
+          schema:
+            type: string
+          description: URI or NS of metaschema module
+        - in: query
+          name: flags
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [disable-schema, disable-constraint]
+          description: URIs of metaschema extension modules to load
+          example: disable-schema
+      responses:
+        '200':
+          $ref: '#/components/responses/SarifResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: validateUpload
+      summary: Validate uploaded OSCAL document
+      parameters:
+        - in: query
+          name: constraint
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          description: URIs of metaschema extension modules to load
+          example: 
+            - https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml
+        - in: query
+          name: module
+          required: false
+          schema:
+            type: string
+          description: URI or NS of metaschema module
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+        - in: query
+          name: flags
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [disable-schema, disable-constraint]
+          description: URIs of metaschema extension modules to load
+          example: disable-schema
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/SarifResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/resolve:
+    get:
+      operationId: resolve
+      summary: Resolve OSCAL local document
+      parameters:
+        - in: query
+          name: document
+          required: true
+          schema:
+            type: string
+          description: Absolute Path of the local OSCAL document to resolve
+          example:
+            - /Users/esper/fedramp-automation/dist/content/rev5/baselines/json/FedRAMP_rev5_HIGH-baseline_profile.json
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: resolveUpload
+      summary: Resolve uploaded OSCAL document
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/convert:
+    get:
+      operationId: convert
+      summary: Convert OSCAL document
+      parameters:
+        - in: query
+          name: document
+          required: true
+          schema:
+            type: string
+          description: URI of the remote OSCAL document to convert
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: convertUpload
+      summary: Convert uploaded OSCAL document
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, yaml, xml]
+          description: Specify the format of the response
+          example: json
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/query:
+    get:
+      operationId: query
+      summary: Query OSCAL document
+      parameters:
+        - in: query
+          name: document
+          required: true
+          schema:
+            type: string
+          description: URI of the remote OSCAL document to convert
+          example: https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-all-VALID.xml
+        - in: query
+          name: expression
+          required: false
+          schema:
+            type: string
+          description: metapath expression to query oscal document
+          example: //user
+        - in: query
+          name: module
+          required: true
+          schema:
+            type: string
+          description: metaschema module
+          example: https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: queryUpload
+      summary: Query uploaded OSCAL document
+      parameters:
+        - in: query
+          name: expression
+          required: true
+          schema:
+            type: string
+          description: metapath expression to query oscal document
+          example: //user
+        - in: query
+          name: module
+          required: true
+          schema:
+            type: string
+          description: metaschema module
+          example: https://raw.githubusercontent.com/usnistgov/OSCAL/refs/heads/main/src/metaschema/oscal_complete_metaschema.xml
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OscalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/packages/{packageId}/files:
+    get:
+      operationId: listPackageFiles
+      summary: List files in a package
+      parameters:
+        - in: path
+          name: packageId
+          required: true
+          schema:
+            type: string
+          description: Package identifier
+      responses:
+        '200':
+          description: List of files in the package
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    size:
+                      type: integer
+                    lastModified:
+                      type: string
+                    mimeType:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Package not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: uploadPackageFile
+      summary: Upload a file to a package
+      parameters:
+        - in: path
+          name: packageId
+          required: true
+          schema:
+            type: string
+          description: Package identifier
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  lastModified:
+                    type: string
+                  mimeType:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/packages/{packageId}/files/{filename}:
+    get:
+      operationId: getPackageFile
+      summary: Get a file from a package
+      parameters:
+        - in: path
+          name: packageId
+          required: true
+          schema:
+            type: string
+          description: Package identifier
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      operationId: updatePackageFile
+      summary: Update a file in a package
+      parameters:
+        - in: path
+          name: packageId
+          required: true
+          schema:
+            type: string
+          description: Package identifier
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: File updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  lastModified:
+                    type: string
+                  mimeType:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      operationId: deletePackageFile
+      summary: Delete a file from a package
+      parameters:
+        - in: path
+          name: packageId
+          required: true
+          schema:
+            type: string
+          description: Package identifier
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      responses:
+        '204':
+          description: File deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/modules/files:
+    get:
+      operationId: listModuleFiles
+      summary: List all module files
+      responses:
+        '200':
+          description: List of module files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    size:
+                      type: integer
+                    lastModified:
+                      type: string
+                    mimeType:
+                      type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      operationId: uploadModuleFile
+      summary: Upload a module file
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  lastModified:
+                    type: string
+                  mimeType:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/modules/files/{filename}:
+    get:
+      operationId: getModuleFile
+      summary: Get a module file
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      operationId: updateModuleFile
+      summary: Update a module file
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      requestBody:
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+          text/xml:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: File updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: integer
+                  lastModified:
+                    type: string
+                  mimeType:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      operationId: deleteModuleFile
+      summary: Delete a module file
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: File name
+      responses:
+        '204':
+          description: File deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: File not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'

@@ -1,0 +1,45 @@
+
+
+profile:
+  uuid: 8c1ee2a6-bd14-4f77-b2f7-3d2bc0aaa55e
+  metadata:
+    title: "Software Development Security Controls Profile"
+    last-modified: "2024-10-24T00:00:00Z"
+    version: "1.0"
+    oscal-version: "1.1.2"
+    parties:
+      - uuid: 11111111-0000-4000-9000-100000000001
+        type: organization
+        name: "Metaschema Framework Organization"
+        short-name: "MFO"
+    roles:
+      - id: profile-author
+        title: Profile Author
+    responsible-parties:
+      - role-id: profile-author
+        party-uuids:
+          - 11111111-0000-4000-9000-100000000001
+
+  imports:
+    - href: "ssdf.catalog.oscal.yaml"
+      include-controls:
+        - with-ids:
+            - po1
+            - po2
+            - po3
+            - po4
+            - po5
+            - ps1
+            - ps2
+            - ps3
+            - pw1
+            - pw2
+            - pw4
+            - pw5
+            - pw6
+            - pw7
+            - pw8
+            - pw9
+            - rv1
+            - rv2
+            - rv3

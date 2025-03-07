@@ -6,30 +6,47 @@
 
   <groupId>gov.nist.secauto.oscal.tools</groupId>
   <artifactId>server</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <properties>
+    <maven.resolver.transport.snapshot.update>never</maven.resolver.transport.snapshot.update>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <kotlin.version>1.7.21</kotlin.version>
-    <kotlinx.coroutines.version>1.6.4</kotlinx.coroutines.version>
+    <kotlin.version>1.8.21</kotlin.version>
+    <kotlinx.coroutines.version>1.9.0</kotlinx.coroutines.version>
 
-    <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
-    <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
-    <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
-
-    <vertx.version>4.5.10</vertx.version>
-    <oscal-cli.version>2.1.0</oscal-cli.version>
-    <metaschema-framework.version>1.1.0</metaschema-framework.version>
-    <liboscal-java.version>4.1.0</liboscal-java.version>
-    <log4j.version>2.23.1</log4j.version>
-
-    <main.verticle>gov.nist.secauto.oscal.tools.server.MainVerticle</main.verticle>
-    <launcher.class>io.vertx.core.Launcher</launcher.class>
+    <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+    <exec-maven-plugin.version>3.4.1</exec-maven-plugin.version>
+    <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
+    <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
+  
+    <vertx.version>4.5.13</vertx.version>
+    <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
+    <oscal-cli.version>2.4.0</oscal-cli.version>
+    <metaschema-framework.version>2.2.0-SNAPSHOT</metaschema-framework.version>
+    <liboscal-java.version>5.2.0-SNAPSHOT</liboscal-java.version>
+    <java.version>17</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <dependency.log4j2.version>2.24.1</dependency.log4j2.version>
+    <main.class>gov.nist.secauto.oscal.tools.server.OscalVerticle</main.class>
   </properties>
 
   <dependencyManagement>
+
     <dependencies>
+      <dependency>
+        <groupId>gov.nist.secauto.swid</groupId>
+        <artifactId>swid-maven-plugin</artifactId>
+        <version>${swid-maven-plugin.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.github.hakky54</groupId>
+        <artifactId>consolecaptor</artifactId>
+        <version>1.0.3</version>
+        <scope>compile</scope>
+    </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
         <artifactId>vertx-stack-depchain</artifactId>
@@ -61,28 +78,48 @@
       <version>${kotlinx.coroutines.version}</version>
     </dependency>
 
-    <!-- Log4j2 dependencies -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-    <dependency>
+      <version>${dependency.log4j2.version}</version>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api-kotlin</artifactId>
+    <version>1.5.0</version>
+  </dependency>
+  <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>${log4j.version}</version>
+      <version>${dependency.log4j2.version}</version>
+      <scope>compile</scope>
     </dependency>
-    <dependency>
+  <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>${log4j.version}</version>
-    </dependency>
-
-    <!-- OSCAL CLI dependency -->
+      <version>${dependency.log4j2.version}</version>
+  </dependency>    <!-- OSCAL CLI dependency -->
     <dependency>
       <groupId>dev.metaschema.oscal</groupId>
       <artifactId>oscal-cli-enhanced</artifactId>
       <version>${oscal-cli.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-databind-modules</artifactId>
+      <version>${metaschema-framework.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- Metaschema Framework dependencies -->
@@ -90,16 +127,37 @@
       <groupId>dev.metaschema.java</groupId>
       <artifactId>cli-processor</artifactId>
       <version>${metaschema-framework.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+
     </dependency>
     <dependency>
       <groupId>dev.metaschema.java</groupId>
       <artifactId>metaschema-cli</artifactId>
       <version>${metaschema-framework.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+
     </dependency>
     <dependency>
       <groupId>dev.metaschema.java</groupId>
       <artifactId>metaschema-schema-generator</artifactId>
       <version>${metaschema-framework.version}</version>
+
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- LibOSCAL Java dependency -->
@@ -107,6 +165,13 @@
       <groupId>dev.metaschema.oscal</groupId>
       <artifactId>liboscal-java</artifactId>
       <version>${liboscal-java.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+
     </dependency>
 
     <!-- Existing test dependencies -->
@@ -115,10 +180,28 @@
       <artifactId>vertx-unit</artifactId>
       <scope>test</scope>
     </dependency>
+   <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+      <version>${vertx.version}</version>
+      <scope>test</scope>
+    </dependency>
+   <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.10.1</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.2</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.10.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>1.10.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -151,20 +234,57 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-maven-plugin</artifactId>
-        <version>${kotlin.version}</version>
-        <configuration>
-          <jvmTarget>17</jvmTarget>
-        </configuration>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
         <executions>
           <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <environmentVariables>
+                <ENVIRONMENT>test</ENVIRONMENT>
+              </environmentVariables>
+              <artifactSet>
+                <includes>
+                  <include>org.apache.logging.log4j:log4j-core</include>
+                </includes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <version>1.8.21</version>
+        <configuration>
+          <jvmTarget>1.8</jvmTarget>
+          <compilerPlugins>
+            <plugin>all-open</plugin>
+          </compilerPlugins>
+          <pluginOptions>
+            <option>all-open:annotation=io.vertx.core.annotations.Verticle</option>
+          </pluginOptions>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-maven-allopen</artifactId>
+            <version>${kotlin.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <?m2e execute onConfiguration,onIncremental?>
             <id>compile</id>
             <goals>
               <goal>compile</goal>
             </goals>
           </execution>
           <execution>
+            <?m2e execute onConfiguration,onIncremental?>
             <id>test-compile</id>
             <goals>
               <goal>test-compile</goal>
@@ -205,18 +325,173 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
       </plugin>
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>${exec-maven-plugin.version}</version>
         <configuration>
-          <mainClass>${launcher.class}</mainClass>
+          <mainClass>${main.class}</mainClass>
           <arguments>
             <argument>run</argument>
             <argument>${main.verticle}</argument>
+            <argument>-Xmx1024m</argument>
           </arguments>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>${launcher.class}</mainClass>
+              <addClasspath>true</addClasspath>
+              <classpathLayoutType>custom</classpathLayoutType>
+              <customClasspathLayout>
+                ${artifact.groupId}.${artifact.artifactId}-${artifact.version}.${artifact.extension}
+              </customClasspathLayout>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <version>2.1.0</version>
+        <configuration>
+          <programs>
+            <program>
+              <mainClass>${main.class}</mainClass>
+              <id>oscal-server</id>
+            </program>
+          </programs>
+          <generateRepository>false</generateRepository>
+          <repositoryLayout>flat</repositoryLayout>
+          <repositoryName>lib</repositoryName>
+          <outputFileNameMapping>
+            @{groupId}@.@{artifactId}@-@{version}@.@{extension}@
+          </outputFileNameMapping>
+          <useWildcardClassPath>true</useWildcardClassPath>
+          <extraJvmArguments>-Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8</extraJvmArguments>
+          <projectArtifactFirstInClassPath>true</projectArtifactFirstInClassPath>
+          <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>
+        </configuration>
+        <executions>
+          <execution>
+            <id>generate-scripts</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>exec-oscal-server-windows</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+            <configuration>
+              <platforms>
+                <platform>windows</platform>
+              </platforms>
+            </configuration>
+          </execution>
+          <execution>
+            <id>exec-oscal-server-unix</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+            <configuration>
+              <platforms>
+                <platform>unix</platform>
+              </platforms>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven-assembly-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>gov.nist.secauto.swid</groupId>
+            <artifactId>swid-maven-plugin</artifactId>
+            <version>${swid-maven-plugin.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>make-assembly-bin</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/bin.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>gov.nist.secauto.swid</groupId>
+            <artifactId>swid-maven-plugin</artifactId>
+            <version>${swid-maven-plugin.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>make-assembly-bin</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>src/main/assembly/bin.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+  <repositories>
+    <!-- Point to your local .m2 repository -->
+    <repository>
+      <id>local-m2-repo</id>
+      <url>file:///${user.home}/.m2/repository</url>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </snapshots>
+    </repository>
+    <!-- Repository for metaschema dependencies -->
+    <repository>
+      <id>repo-snapshot</id>
+      <name>Metaschema Framework Repository</name>
+      <url>https://raw.githubusercontent.com/metaschema-framework/maven2/refs/heads/main</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+      </snapshots>
+    </repository>
+  </repositories>
+
 </project>

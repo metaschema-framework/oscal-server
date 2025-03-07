@@ -1,0 +1,102 @@
+name: Release Assembly
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      oscal_repo:
+        description: 'OSCAL Git repository URL'
+        required: false
+        default: 'https://github.com/GSA/OSCAL.git'
+      oscal_version:
+        description: 'OSCAL Git branch, tag, or commit hash'
+        required: false
+        default: 'develop'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+                
+    - name: Build using Makefile
+      run: |
+        # Clean any existing SNAPSHOT dependencies
+        make clean-deps
+        
+        # Initialize submodules
+        make init-submodules
+        
+        # Run tests using the make system
+        make test OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
+        
+        # Build and package the project
+        make package OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
+
+    - name: Get version and set release info
+      id: get_version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/v* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_OUTPUT
+          echo "RELEASE_NAME=Release $VERSION" >> $GITHUB_OUTPUT
+          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+        else
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=v$VERSION-$COMMIT_HASH-$TIMESTAMP" >> $GITHUB_OUTPUT
+          echo "RELEASE_NAME=Release $VERSION ($(date +'%Y-%m-%d %H:%M:%S'))" >> $GITHUB_OUTPUT
+          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: List target directory
+      run: ls -l target/
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
+        release_name: ${{ steps.get_version.outputs.RELEASE_NAME }}
+        draft: false
+        prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/server-${{ steps.get_version.outputs.VERSION }}-oscal-server.zip
+        asset_name: oscal-server-${{ steps.get_version.outputs.VERSION }}.zip
+        asset_content_type: application/zip

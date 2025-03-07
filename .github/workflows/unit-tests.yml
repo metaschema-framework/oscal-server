@@ -1,0 +1,54 @@
+name: Run unit tests
+
+on:
+    push:
+      branches: [ "main" ]
+    pull_request:
+    workflow_dispatch:
+      inputs:
+        oscal_repo:
+          description: 'OSCAL Git repository URL'
+          required: false
+          default: 'https://github.com/usnistgov/OSCAL.git'
+        oscal_version:
+          description: 'OSCAL Git branch, tag, or commit hash'
+          required: false
+          default: 'main'
+  
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+                
+    - name: Run tests using Makefile
+      run: |
+        # Clean any existing SNAPSHOT dependencies
+        make clean-deps
+        
+        # Initialize submodules
+        make init-submodules
+        
+        # Run tests (this will build dependencies, client, and run tests)
+        make test OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
