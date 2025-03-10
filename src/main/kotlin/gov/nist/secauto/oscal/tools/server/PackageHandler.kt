@@ -41,6 +41,7 @@ class PackageHandler(private val packagesDir: Path) {
                         .put("size", path.fileSize())
                         .put("lastModified", path.getLastModifiedTime().toString())
                         .put("mimeType", Files.probeContentType(path) ?: "application/octet-stream")
+                        .put("path", packageDir.relativize(path.parent ?: packageDir).toString())
                 }.toList()
             }
 
@@ -95,6 +96,7 @@ class PackageHandler(private val packagesDir: Path) {
                 .put("size", Files.size(targetPath))
                 .put("lastModified", Files.getLastModifiedTime(targetPath).toString())
                 .put("mimeType", contentType ?: "application/octet-stream")
+                .put("path", packageDir.relativize(targetPath.parent ?: packageDir).toString())
 
             ctx.response()
                 .setStatusCode(201)
@@ -174,6 +176,7 @@ class PackageHandler(private val packagesDir: Path) {
                 .put("size", Files.size(filePath))
                 .put("lastModified", Files.getLastModifiedTime(filePath).toString())
                 .put("mimeType", contentType ?: "application/octet-stream")
+                .put("path", packageDir.relativize(filePath.parent ?: packageDir).toString())
 
             ctx.response()
                 .setStatusCode(200)

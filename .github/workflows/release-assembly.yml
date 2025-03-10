@@ -7,6 +7,15 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      oscal_repo:
+        description: 'OSCAL Git repository URL'
+        required: false
+        default: 'https://github.com/GSA/OSCAL.git'
+      oscal_version:
+        description: 'OSCAL Git branch, tag, or commit hash'
+        required: false
+        default: 'develop'
 
 jobs:
   build-and-release:
@@ -19,6 +28,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+        submodules: recursive
 
     - name: Set up JDK 17
       uses: actions/setup-java@v3
@@ -26,28 +36,27 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
-
+        
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: client/package-lock.json
-    - name: Clean with Maven
-      run: mvn clean
-  
-    - name: Build client
+                
+    - name: Build using Makefile
       run: |
-        cd client
-        npm ci
-        npm run build
-        cd ..
-  
-    - name: Compile with Maven
-      run: mvn compile
-  
-    - name: Package with Maven
-      run: mvn package
+        # Clean any existing SNAPSHOT dependencies
+        make clean-deps
+        
+        # Initialize submodules
+        make init-submodules
+        
+        # Run tests using the make system
+        make test OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
+        
+        # Build and package the project
+        make package OSCAL_REPO="${{ github.event.inputs.oscal_repo || 'https://github.com/usnistgov/OSCAL.git' }}" OSCAL_VERSION="${{ github.event.inputs.oscal_version || 'main' }}"
 
     - name: Get version and set release info
       id: get_version

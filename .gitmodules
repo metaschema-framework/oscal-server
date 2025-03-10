@@ -1,0 +1,9 @@
+[submodule "lib/liboscal-java"]
+	path = lib/liboscal-java
+	url = https://github.com/metaschema-framework/liboscal-java.git
+[submodule "lib/metaschema-java"]
+	path = lib/metaschema-java
+	url = https://github.com/metaschema-framework/metaschema-java.git
+[submodule "client"]
+	path = client
+	url = https://github.com/metaschema-framework/oscal-editor.git

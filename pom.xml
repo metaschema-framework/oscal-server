@@ -6,27 +6,27 @@
 
   <groupId>gov.nist.secauto.oscal.tools</groupId>
   <artifactId>server</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <properties>
-    
+    <maven.resolver.transport.snapshot.update>never</maven.resolver.transport.snapshot.update>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <kotlin.version>2.0.20</kotlin.version>
+    <kotlin.version>1.8.21</kotlin.version>
     <kotlinx.coroutines.version>1.9.0</kotlinx.coroutines.version>
 
     <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
-    <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.4.1</exec-maven-plugin.version>
     <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
     <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
   
-    <vertx.version>4.5.10</vertx.version>
+    <vertx.version>4.5.13</vertx.version>
     <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
     <oscal-cli.version>2.4.0</oscal-cli.version>
     <metaschema-framework.version>2.1.0</metaschema-framework.version>
     <liboscal-java.version>5.1.0</liboscal-java.version>
-    <java.version>1.8</java.version>
+    <java.version>17</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <dependency.log4j2.version>2.24.1</dependency.log4j2.version>
@@ -110,6 +110,17 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>dev.metaschema.java</groupId>
+      <artifactId>metaschema-databind-modules</artifactId>
+      <version>${metaschema-framework.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
 
     <!-- Metaschema Framework dependencies -->
     <dependency>
@@ -169,10 +180,28 @@
       <artifactId>vertx-unit</artifactId>
       <scope>test</scope>
     </dependency>
+   <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+      <version>${vertx.version}</version>
+      <scope>test</scope>
+    </dependency>
+   <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.10.1</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.2</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.10.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <version>1.10.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -229,7 +258,7 @@
       <plugin>
         <groupId>org.jetbrains.kotlin</groupId>
         <artifactId>kotlin-maven-plugin</artifactId>
-        <version>${kotlin.version}</version>
+        <version>1.8.21</version>
         <configuration>
           <jvmTarget>1.8</jvmTarget>
           <compilerPlugins>
@@ -296,6 +325,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
       </plugin>
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -435,4 +465,33 @@
       </plugin>
     </plugins>
   </build>
+  <repositories>
+    <!-- Point to your local .m2 repository -->
+    <repository>
+      <id>local-m2-repo</id>
+      <url>file:///${user.home}/.m2/repository</url>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </snapshots>
+    </repository>
+    <!-- Repository for metaschema dependencies -->
+    <repository>
+      <id>repo-snapshot</id>
+      <name>Metaschema Framework Repository</name>
+      <url>https://raw.githubusercontent.com/metaschema-framework/maven2/refs/heads/main</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+      </snapshots>
+    </repository>
+  </repositories>
+
 </project>
