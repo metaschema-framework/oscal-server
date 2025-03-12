@@ -1,29 +1,29 @@
 # SPDX-FileCopyrightText: none
 # SPDX-License-Identifier: CC0-1.0
-# Start with a base image containing Java 17
-FROM eclipse-temurin:17-jdk-focal
+FROM eclipse-temurin:17-jre-jammy
 
 # Set environment variables
-ENV VERTICLE_NAME=gov.nist.secauto.oscal.tools.server.OscalVerticle
-ENV APP_HOME /usr/app
+ENV APP_HOME=/usr/app
+ENV PORT=8888
 
-# Create the application directory
-RUN mkdir -p $APP_HOME
-
-# Set the working directory
+# Create app directory
 WORKDIR $APP_HOME
 
-# Copy the project files into the container
-COPY . .
+# Install curl and unzip for downloading and extracting the release
+RUN apt-get update && apt-get install -y curl unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Maven
-RUN apt-get update && apt-get install -y maven
+# Download and extract the latest release
+RUN RELEASE_DATA=$(curl -s https://api.github.com/repos/metaschema-framework/oscal-server/releases/latest) \
+    && DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep -o 'https://.*oscal-server.*\.zip' | head -n1) \
+    && curl -L -o oscal-server.zip "$DOWNLOAD_URL" \
+    && unzip oscal-server.zip \
+    && rm oscal-server.zip \
+    && find . -name "oscal-server" -type f -exec chmod +x {} \; \
+    && mv $(find . -name "oscal-server" -type f) .
 
-# Build the application
-RUN mvn package
+# Expose the application port
+EXPOSE $PORT
 
-# Expose the port your application will run on
-EXPOSE 8888
-
-# Run the application using Maven
-CMD ["mvn", "exec:java"]
+# Run the application
+CMD ["./oscal-server"]

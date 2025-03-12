@@ -1,6 +1,24 @@
-# flyctl launch added from .gitignore
+# Version control
+.git
+.gitignore
+.gitmodules
 
-**/.DS_Store
-**/*.class
-**/target
+# Build artifacts
+target/
+dependency-reduced-pom.xml
+
+# Source code (not needed since we download the release)
+src/
+lib/
+client/
+pom.xml
+
+# Documentation
+*.md
+USERS.md
+LICENSE.md
+SECURITY.md
+
+# Configuration files
+.java-version
 fly.toml
