@@ -1,4 +1,3 @@
-# SPDX-FileCopyrightText: none
 # SPDX-License-Identifier: CC0-1.0
 FROM eclipse-temurin:17-jre-jammy
 
