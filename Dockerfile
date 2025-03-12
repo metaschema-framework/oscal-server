@@ -19,11 +19,17 @@ RUN RELEASE_DATA=$(curl -s https://api.github.com/repos/metaschema-framework/osc
     && curl -L -o oscal-server.zip "$DOWNLOAD_URL" \
     && unzip oscal-server.zip \
     && rm oscal-server.zip \
-    && find . -name "oscal-server" -type f -exec chmod +x {} \; \
-    && mv $(find . -name "oscal-server" -type f) .
+    # Make the executable runnable
+    && find . -type f -path "*/bin/oscal-server" -exec chmod +x {} \;
+
+# Find and set the executable path for CMD
+RUN OSCAL_SERVER_PATH=$(find . -type f -path "*/bin/oscal-server") \
+    && echo "#!/bin/sh" > /entrypoint.sh \
+    && echo "exec $OSCAL_SERVER_PATH" >> /entrypoint.sh \
+    && chmod +x /entrypoint.sh
 
 # Expose the application port
 EXPOSE $PORT
 
 # Run the application
-CMD ["./oscal-server"]
+CMD ["/entrypoint.sh"]
