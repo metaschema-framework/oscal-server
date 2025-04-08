@@ -21,7 +21,7 @@
     <maven-assembly-plugin.version>3.3.0</maven-assembly-plugin.version>
     <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
   
-    <vertx.version>4.5.13</vertx.version>
+    <vertx.version>4.5.14</vertx.version>
     <swid-maven-plugin.version>0.7.0</swid-maven-plugin.version>
     <oscal-cli.version>2.4.0</oscal-cli.version>
     <metaschema-framework.version>2.1.0</metaschema-framework.version>
