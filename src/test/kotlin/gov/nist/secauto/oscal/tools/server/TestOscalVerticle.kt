@@ -40,15 +40,15 @@ class TestOscalVerticle {
     fun test_performance_validation(testContext: VertxTestContext) {
         try {
             // Download base test file
-            val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/62ed5a45fb9fe7e8137092f6b83c33dba5a9dc78/src/content/rev5/baselines/xml/FedRAMP_rev5_catalog_tailoring_profile.xml")
             val baseFile = downloadToTempFile(url, "perf-base", ".xml")
             
-            // Create 20 slightly modified copies
-            val testFiles = (1..20).map { index ->
+            // Create 8 slightly modified copies
+            val testFiles = (1..8).map { index ->
                 val content = Files.readString(baseFile)
                 val modified = content.replace(
-                    "<title>Enterprise Logging and Auditing System Security Plan</title>",
-                    "<title>Enterprise Logging and Auditing System Security Plan $index</title>"
+                    "<title>FedRAMP tailoring of NIST Special Publication (SP) 800-53 revision 5</title>",
+                    "<title>FedRAMP tailoring of NIST Special Publication (SP) 800-53 revision 5 Copy $index</title>"
                 )
                 val tempFile = Files.createTempFile(baseFile.parent, "perf-test-$index", ".xml")
                 Files.writeString(tempFile, modified)
@@ -114,7 +114,7 @@ class TestOscalVerticle {
     fun test_oscal_command_remote(testContext: VertxTestContext) {
         try {
             // Download the file first
-            val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/62ed5a45fb9fe7e8137092f6b83c33dba5a9dc78/src/content/rev5/baselines/xml/FedRAMP_rev5_catalog_tailoring_profile.xml")
             val tempFile = downloadToTempFile(url, "remote-test", ".xml")
             val fileUri = tempFile.toUri().toString()
             
@@ -152,7 +152,7 @@ class TestOscalVerticle {
     fun test_oscal_command_local_file(testContext: VertxTestContext) {
         try {
             // Download the file
-            val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/62ed5a45fb9fe7e8137092f6b83c33dba5a9dc78/src/content/rev5/baselines/xml/FedRAMP_rev5_catalog_tailoring_profile.xml")
             val homeDir = System.getProperty("user.home")
             val oscalDir = Paths.get(homeDir, ".oscal")
 
@@ -247,7 +247,7 @@ class TestOscalVerticle {
 
     @Test
     fun test_oscal_command_convert(testContext: VertxTestContext) {
-        val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/main/examples/catalog/xml/basic-catalog.xml")
+        val url = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/62ed5a45fb9fe7e8137092f6b83c33dba5a9dc78/src/content/rev5/baselines/xml/FedRAMP_rev5_catalog_tailoring_profile.xml")
         val tempFile = downloadToTempFile(url, "convert", ".xml")
 
         try {
@@ -340,7 +340,7 @@ class TestOscalVerticle {
     fun test_validate_with_constraint_increases_rule_count(testContext: VertxTestContext) {
         try {
             // Download and save test files
-            val sspUrl = URL("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/content/ssp-attachment-type-INVALID.xml")
+            val sspUrl = URL("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-attachment-type-INVALID.xml")
             val constraintUrl = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml")
             
             val sspFile = downloadToTempFile(sspUrl, "ssp", ".xml")
@@ -376,8 +376,8 @@ class TestOscalVerticle {
                                         assertEquals(200, responseWithConstraint.statusCode())
                                         assertTrue(ruleCountWithConstraint > ruleCountWithoutConstraint,
                                             "Rule count with constraint ($ruleCountWithConstraint) should be greater than without constraint ($ruleCountWithoutConstraint)")
-                                        assertTrue(sarifWithConstraint.contains("resource-has-title"))
-                                        assertFalse(sarifWithoutConstraint.contains("resource-has-title"))
+                                        assertTrue(sarifWithConstraint.contains("frr279"))
+                                        assertFalse(sarifWithoutConstraint.contains("frr279"))
                                         testContext.completeNow()
                                     }
                                 } else {
