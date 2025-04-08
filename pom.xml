@@ -29,7 +29,7 @@
     <java.version>17</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
-    <dependency.log4j2.version>2.24.1</dependency.log4j2.version>
+    <dependency.log4j2.version>2.24.3</dependency.log4j2.version>
     <main.class>gov.nist.secauto.oscal.tools.server.OscalVerticle</main.class>
   </properties>
 
