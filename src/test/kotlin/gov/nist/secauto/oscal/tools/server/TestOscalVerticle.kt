@@ -40,15 +40,15 @@ class TestOscalVerticle {
     fun test_performance_validation(testContext: VertxTestContext) {
         try {
             // Download base test file
-            val url = URL("https://raw.githubusercontent.com/usnistgov/oscal-content/refs/heads/main/examples/ssp/xml/ssp-example.xml")
+            val url = URL("https://github.com/GSA/fedramp-automation/blob/62ed5a45fb9fe7e8137092f6b83c33dba5a9dc78/src/content/rev5/baselines/xml/FedRAMP_rev5_catalog_tailoring_profile.xml")
             val baseFile = downloadToTempFile(url, "perf-base", ".xml")
             
             // Create 20 slightly modified copies
             val testFiles = (1..20).map { index ->
                 val content = Files.readString(baseFile)
                 val modified = content.replace(
-                    "<title>Enterprise Logging and Auditing System Security Plan</title>",
-                    "<title>Enterprise Logging and Auditing System Security Plan $index</title>"
+                    "<title>FedRAMP tailoring of NIST Special Publication (SP) 800-53 revision 5</title>",
+                    "<title>FedRAMP tailoring of NIST Special Publication (SP) 800-53 revision 5 Copy $index</title>"
                 )
                 val tempFile = Files.createTempFile(baseFile.parent, "perf-test-$index", ".xml")
                 Files.writeString(tempFile, modified)
