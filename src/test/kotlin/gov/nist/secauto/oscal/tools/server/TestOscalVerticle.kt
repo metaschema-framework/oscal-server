@@ -340,7 +340,7 @@ class TestOscalVerticle {
     fun test_validate_with_constraint_increases_rule_count(testContext: VertxTestContext) {
         try {
             // Download and save test files
-            val sspUrl = URL("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/feature/external-constraints/src/validations/constraints/content/ssp-attachment-type-INVALID.xml")
+            val sspUrl = URL("https://raw.githubusercontent.com/wandmagic/fedramp-automation/refs/heads/develop/src/validations/constraints/content/ssp-attachment-type-INVALID.xml")
             val constraintUrl = URL("https://raw.githubusercontent.com/GSA/fedramp-automation/refs/heads/develop/src/validations/constraints/fedramp-external-constraints.xml")
             
             val sspFile = downloadToTempFile(sspUrl, "ssp", ".xml")
@@ -376,8 +376,8 @@ class TestOscalVerticle {
                                         assertEquals(200, responseWithConstraint.statusCode())
                                         assertTrue(ruleCountWithConstraint > ruleCountWithoutConstraint,
                                             "Rule count with constraint ($ruleCountWithConstraint) should be greater than without constraint ($ruleCountWithoutConstraint)")
-                                        assertTrue(sarifWithConstraint.contains("resource-has-title"))
-                                        assertFalse(sarifWithoutConstraint.contains("resource-has-title"))
+                                        assertTrue(sarifWithConstraint.contains("frr279"))
+                                        assertFalse(sarifWithoutConstraint.contains("frr279"))
                                         testContext.completeNow()
                                     }
                                 } else {
