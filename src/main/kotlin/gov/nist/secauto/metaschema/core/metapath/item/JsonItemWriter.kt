@@ -1,6 +1,6 @@
 package gov.nist.secauto.metaschema.core.metapath.item
-import gov.nist.secauto.metaschema.core.metapath.ICollectionValue
-import gov.nist.secauto.metaschema.core.metapath.ISequence
+import gov.nist.secauto.metaschema.core.metapath.item.ICollectionValue
+import gov.nist.secauto.metaschema.core.metapath.item.ISequence
 import gov.nist.secauto.metaschema.databind.io.SerializationFeature;
 import gov.nist.secauto.metaschema.core.model.IBoundObject;
 import gov.nist.secauto.metaschema.core.metapath.function.IFunction
